@@ -41976,15 +41976,15 @@ ${a.join(`
       {
         "version": "1.0",
         "meta": {
-          "id": "demo-marathon-001",
-          "athlete": "Demo Runner",
-          "event": "Boston Marathon",
-          "eventDate": "2025-04-21",
+          "id": "demo-5k-beginner-001",
+          "athlete": "Demo Beginner Runner",
+          "event": "First 5K Race",
+          "eventDate": "2025-03-02",
           "planStartDate": "2025-01-06",
-          "planEndDate": "2025-04-20",
+          "planEndDate": "2025-03-02",
           "createdAt": "2025-01-01T00:00:00Z",
           "updatedAt": "2025-01-01T00:00:00Z",
-          "totalWeeks": 10,
+          "totalWeeks": 8,
           "generatedBy": "Claude Coach"
         },
         "preferences": {
@@ -41995,28 +41995,30 @@ ${a.join(`
         },
         "assessment": {
           "foundation": {
-            "raceHistory": ["Half Marathon 2024 - 1:52:00", "10K 2024 - 48:30"],
-            "peakTrainingLoad": 35,
-            "foundationLevel": "intermediate",
-            "yearsInSport": 3
+            "raceHistory": [],
+            "peakTrainingLoad": 4,
+            "foundationLevel": "beginner",
+            "yearsInSport": 0.2
           },
           "currentForm": {
-            "weeklyVolume": { "total": 5, "swim": 0, "bike": 0, "run": 5 },
-            "longestSessions": { "swim": 0, "bike": 0, "run": 13 },
-            "consistency": 8
+            "weeklyVolume": { "total": 1.5, "swim": 0, "bike": 0, "run": 1.5 },
+            "longestSessions": { "swim": 0, "bike": 0, "run": 2 },
+            "consistency": 6
           },
           "strengths": [
-            { "sport": "run", "evidence": "Consistent weekly mileage, good half marathon time" }
+            { "sport": "run", "evidence": "Motivated, can run 20 minutes continuously" }
           ],
-          "limiters": [
-            { "sport": "run", "evidence": "Never run a full marathon, need to build endurance" }
-          ],
-          "constraints": ["Work Mon-Fri", "Prefer morning runs", "Long runs on weekends"]
+          "limiters": [{ "sport": "run", "evidence": "New to running, building aerobic base" }],
+          "constraints": [
+            "Prefers morning runs",
+            "4-5 days/week availability",
+            "30-45 min sessions"
+          ]
         },
         "zones": {
           "run": {
             "hr": {
-              "lthr": 168,
+              "lthr": 170,
               "zones": [
                 {
                   "zone": 1,
@@ -42024,81 +42026,90 @@ ${a.join(`
                   "percentLow": 0,
                   "percentHigh": 81,
                   "hrLow": 0,
-                  "hrHigh": 136
+                  "hrHigh": 138
                 },
                 {
                   "zone": 2,
                   "name": "Aerobic",
                   "percentLow": 81,
                   "percentHigh": 89,
-                  "hrLow": 136,
-                  "hrHigh": 150
+                  "hrLow": 138,
+                  "hrHigh": 151
                 },
                 {
                   "zone": 3,
                   "name": "Tempo",
                   "percentLow": 89,
                   "percentHigh": 94,
-                  "hrLow": 150,
-                  "hrHigh": 158
+                  "hrLow": 151,
+                  "hrHigh": 160
                 },
                 {
                   "zone": 4,
                   "name": "Threshold",
                   "percentLow": 94,
                   "percentHigh": 100,
-                  "hrLow": 158,
-                  "hrHigh": 168
+                  "hrLow": 160,
+                  "hrHigh": 170
                 },
                 {
                   "zone": 5,
                   "name": "VO2max",
                   "percentLow": 100,
                   "percentHigh": 106,
-                  "hrLow": 168,
-                  "hrHigh": 178
+                  "hrLow": 170,
+                  "hrHigh": 180
                 }
               ]
             },
             "pace": {
-              "thresholdPace": "8:00/mi",
+              "thresholdPace": "9:30/mi",
               "zones": [
-                { "zone": 1, "name": "Recovery", "pace": "10:30-11:30/mi" },
-                { "zone": 2, "name": "Easy", "pace": "9:15-10:00/mi" },
-                { "zone": 3, "name": "Marathon Pace", "pace": "8:45-9:00/mi" },
-                { "zone": 4, "name": "Tempo", "pace": "7:45-8:15/mi" },
-                { "zone": 5, "name": "Interval", "pace": "7:00-7:30/mi" }
+                { "zone": 1, "name": "Recovery", "pace": "12:30-13:30/mi" },
+                { "zone": 2, "name": "Easy", "pace": "11:00-12:00/mi" },
+                { "zone": 3, "name": "Tempo", "pace": "10:00-10:30/mi" },
+                { "zone": 4, "name": "Threshold", "pace": "9:15-9:45/mi" },
+                { "zone": 5, "name": "Race Pace", "pace": "9:00-9:30/mi" }
               ]
             }
           }
         },
         "phases": [
           {
-            "name": "Base",
+            "name": "Base Building",
             "startWeek": 1,
+            "endWeek": 3,
+            "focus": "Build aerobic foundation with walk/run intervals progressing to continuous running",
+            "weeklyHoursRange": { "low": 2, "high": 3 },
+            "keyWorkouts": ["Walk/run intervals", "Easy runs", "Strides"],
+            "physiologicalGoals": ["Aerobic base", "Running economy"]
+          },
+          {
+            "name": "Recovery",
+            "startWeek": 4,
             "endWeek": 4,
-            "focus": "Build aerobic foundation",
-            "weeklyHoursRange": { "low": 5, "high": 7 },
-            "keyWorkouts": ["Long run", "Easy runs"],
-            "physiologicalGoals": ["Aerobic base"]
+            "focus": "Absorb training adaptations, reduce volume 30%",
+            "weeklyHoursRange": { "low": 1.5, "high": 2 },
+            "keyWorkouts": ["Easy runs only"],
+            "physiologicalGoals": ["Recovery", "Adaptation"]
           },
           {
             "name": "Build",
             "startWeek": 5,
-            "endWeek": 8,
-            "focus": "Increase volume and intensity",
-            "weeklyHoursRange": { "low": 7, "high": 9 },
-            "keyWorkouts": ["Tempo runs", "Long runs with MP"],
-            "physiologicalGoals": ["Lactate threshold"]
+            "endWeek": 7,
+            "focus": "Introduce tempo work, increase volume, develop race-specific fitness",
+            "weeklyHoursRange": { "low": 2.5, "high": 3.5 },
+            "keyWorkouts": ["Tempo runs", "Continuous runs", "Strides"],
+            "physiologicalGoals": ["Lactate threshold", "Running efficiency"]
           },
           {
-            "name": "Peak",
-            "startWeek": 9,
-            "endWeek": 10,
-            "focus": "Race-specific preparation",
-            "weeklyHoursRange": { "low": 6, "high": 8 },
-            "keyWorkouts": ["Race simulation"],
-            "physiologicalGoals": ["Peak fitness"]
+            "name": "Taper & Race",
+            "startWeek": 8,
+            "endWeek": 8,
+            "focus": "Reduce volume, maintain intensity, race day execution",
+            "weeklyHoursRange": { "low": 1.5, "high": 2 },
+            "keyWorkouts": ["Short tempo", "Race day"],
+            "physiologicalGoals": ["Peak freshness", "Race execution"]
           }
         ],
         "weeks": [
@@ -42106,9 +42117,9 @@ ${a.join(`
             "weekNumber": 1,
             "startDate": "2025-01-06",
             "endDate": "2025-01-12",
-            "phase": "Base",
-            "focus": "Establish routine",
-            "targetHours": 5,
+            "phase": "Base Building",
+            "focus": "Establish routine with walk/run intervals",
+            "targetHours": 2,
             "isRecoveryWeek": false,
             "days": [
               {
@@ -42117,10 +42128,14 @@ ${a.join(`
                 "workouts": [
                   {
                     "id": "w1-mon",
-                    "sport": "rest",
-                    "type": "rest",
-                    "name": "Rest Day",
-                    "description": "Recovery",
+                    "sport": "run",
+                    "type": "walk-run",
+                    "name": "Walk/Run Intervals",
+                    "description": "Build aerobic base with intervals",
+                    "durationMinutes": 25,
+                    "distanceMiles": 1.5,
+                    "primaryZone": "Zone 1-2",
+                    "humanReadable": "WARM-UP: 5 min easy walk\n\nMAIN SET:\n4x (2 min run / 2 min walk)\nKeep run pace conversational\nHR in Zone 1-2 (under 151)\n\nCOOL-DOWN: 4 min easy walk",
                     "completed": true
                   }
                 ]
@@ -42131,14 +42146,10 @@ ${a.join(`
                 "workouts": [
                   {
                     "id": "w1-tue",
-                    "sport": "run",
-                    "type": "easy",
-                    "name": "Easy Run",
-                    "description": "Aerobic base",
-                    "durationMinutes": 45,
-                    "distanceMeters": 8000,
-                    "primaryZone": "Zone 2",
-                    "humanReadable": "45 min easy running\nZone 2 heart rate\nConversational pace",
+                    "sport": "rest",
+                    "type": "rest",
+                    "name": "Rest Day",
+                    "description": "Recovery and adaptation",
                     "completed": true
                   }
                 ]
@@ -42149,12 +42160,14 @@ ${a.join(`
                 "workouts": [
                   {
                     "id": "w1-wed",
-                    "sport": "strength",
-                    "type": "strength",
-                    "name": "Strength",
-                    "description": "Core and legs",
-                    "durationMinutes": 30,
-                    "humanReadable": "3 rounds:\n12 squats\n10 lunges each\n30s plank\n15 calf raises",
+                    "sport": "run",
+                    "type": "walk-run",
+                    "name": "Walk/Run Intervals",
+                    "description": "Aerobic development",
+                    "durationMinutes": 25,
+                    "distanceMiles": 1.5,
+                    "primaryZone": "Zone 1-2",
+                    "humanReadable": "WARM-UP: 5 min easy walk\n\nMAIN SET:\n4x (2 min run / 2 min walk)\nFocus on relaxed form\nShoulders down, arms relaxed\n\nCOOL-DOWN: 4 min easy walk",
                     "completed": true
                   }
                 ]
@@ -42165,14 +42178,12 @@ ${a.join(`
                 "workouts": [
                   {
                     "id": "w1-thu",
-                    "sport": "run",
-                    "type": "easy",
-                    "name": "Easy Run + Strides",
-                    "description": "Easy with strides",
-                    "durationMinutes": 40,
-                    "distanceMeters": 7000,
-                    "primaryZone": "Zone 2",
-                    "humanReadable": "35 min easy\n4x20s strides",
+                    "sport": "strength",
+                    "type": "strength",
+                    "name": "Runner Strength",
+                    "description": "Injury prevention focus",
+                    "durationMinutes": 20,
+                    "humanReadable": "WARM-UP: 2 min marching in place\n\nCIRCUIT (2 rounds):\n- 10 bodyweight squats\n- 10 glute bridges\n- 8 lunges per leg\n- 20 sec plank\n- 10 calf raises\n\nRest 30 sec between exercises\n\nCOOL-DOWN: 3 min stretching",
                     "completed": true
                   }
                 ]
@@ -42198,13 +42209,13 @@ ${a.join(`
                   {
                     "id": "w1-sat",
                     "sport": "run",
-                    "type": "easy",
-                    "name": "Easy Run",
-                    "description": "Shakeout",
+                    "type": "walk-run",
+                    "name": "Walk/Run + Strides",
+                    "description": "Aerobic with neuromuscular work",
                     "durationMinutes": 30,
-                    "distanceMeters": 5000,
-                    "primaryZone": "Zone 2",
-                    "humanReadable": "30 min easy",
+                    "distanceMiles": 1.75,
+                    "primaryZone": "Zone 1-2",
+                    "humanReadable": "WARM-UP: 5 min easy walk\n\nMAIN SET:\n5x (2 min run / 1.5 min walk)\n\nSTRIDES:\n2x 15 sec pickups (faster but controlled)\nWalk 1 min between\n\nCOOL-DOWN: 3 min easy walk",
                     "completed": false
                   }
                 ]
@@ -42217,22 +42228,22 @@ ${a.join(`
                     "id": "w1-sun",
                     "sport": "run",
                     "type": "long",
-                    "name": "Long Run",
-                    "description": "Building endurance",
-                    "durationMinutes": 75,
-                    "distanceMeters": 14500,
-                    "primaryZone": "Zone 2",
-                    "humanReadable": "9 miles easy\nPractice hydration",
+                    "name": "Long Walk/Run",
+                    "description": "Longest session of the week",
+                    "durationMinutes": 35,
+                    "distanceMiles": 2,
+                    "primaryZone": "Zone 1-2",
+                    "humanReadable": "WARM-UP: 5 min easy walk\n\nMAIN SET:\n5x (3 min run / 2 min walk)\nKeep effort EASY\nYou should be able to talk\n\nCOOL-DOWN: 5 min easy walk\n\nNOTE: This is your longest session. Stay relaxed!",
                     "completed": false
                   }
                 ]
               }
             ],
             "summary": {
-              "totalHours": 5,
+              "totalHours": 2.25,
               "bySport": {
-                "run": { "sessions": 4, "hours": 3.5, "km": 34.5 },
-                "strength": { "sessions": 1, "hours": 0.5, "km": 0 }
+                "run": { "sessions": 4, "hours": 1.9, "miles": 6.75 },
+                "strength": { "sessions": 1, "hours": 0.33, "miles": 0 }
               }
             }
           },
@@ -42240,9 +42251,9 @@ ${a.join(`
             "weekNumber": 2,
             "startDate": "2025-01-13",
             "endDate": "2025-01-19",
-            "phase": "Base",
-            "focus": "Build consistency",
-            "targetHours": 5.5,
+            "phase": "Base Building",
+            "focus": "Extend run intervals, reduce walk breaks",
+            "targetHours": 2.25,
             "isRecoveryWeek": false,
             "days": [
               {
@@ -42251,10 +42262,14 @@ ${a.join(`
                 "workouts": [
                   {
                     "id": "w2-mon",
-                    "sport": "rest",
-                    "type": "rest",
-                    "name": "Rest Day",
-                    "description": "Recovery",
+                    "sport": "run",
+                    "type": "walk-run",
+                    "name": "Walk/Run Intervals",
+                    "description": "Longer run intervals",
+                    "durationMinutes": 28,
+                    "distanceMiles": 1.75,
+                    "primaryZone": "Zone 1-2",
+                    "humanReadable": "WARM-UP: 5 min easy walk\n\nMAIN SET:\n4x (3 min run / 1.5 min walk)\nMaintain conversational pace\nHR Zone 1-2 (under 151)\n\nCOOL-DOWN: 4 min easy walk",
                     "completed": false
                   }
                 ]
@@ -42265,14 +42280,10 @@ ${a.join(`
                 "workouts": [
                   {
                     "id": "w2-tue",
-                    "sport": "run",
-                    "type": "easy",
-                    "name": "Easy Run",
-                    "description": "Aerobic",
-                    "durationMinutes": 50,
-                    "distanceMeters": 9000,
-                    "primaryZone": "Zone 2",
-                    "humanReadable": "50 min easy\n5.5 miles",
+                    "sport": "rest",
+                    "type": "rest",
+                    "name": "Rest Day",
+                    "description": "Recovery",
                     "completed": false
                   }
                 ]
@@ -42283,12 +42294,14 @@ ${a.join(`
                 "workouts": [
                   {
                     "id": "w2-wed",
-                    "sport": "strength",
-                    "type": "strength",
-                    "name": "Strength",
-                    "description": "Core and legs",
-                    "durationMinutes": 35,
-                    "humanReadable": "3 rounds:\n15 squats\n12 lunges each\n45s plank",
+                    "sport": "run",
+                    "type": "walk-run",
+                    "name": "Walk/Run Intervals",
+                    "description": "Building endurance",
+                    "durationMinutes": 28,
+                    "distanceMiles": 1.75,
+                    "primaryZone": "Zone 1-2",
+                    "humanReadable": "WARM-UP: 5 min easy walk\n\nMAIN SET:\n4x (3 min run / 1.5 min walk)\nFocus on steady breathing\nRelax shoulders and hands\n\nCOOL-DOWN: 4 min easy walk",
                     "completed": false
                   }
                 ]
@@ -42299,14 +42312,12 @@ ${a.join(`
                 "workouts": [
                   {
                     "id": "w2-thu",
-                    "sport": "run",
-                    "type": "easy",
-                    "name": "Easy Run + Strides",
-                    "description": "With strides",
-                    "durationMinutes": 45,
-                    "distanceMeters": 8000,
-                    "primaryZone": "Zone 2",
-                    "humanReadable": "40 min easy\n5x20s strides",
+                    "sport": "strength",
+                    "type": "strength",
+                    "name": "Runner Strength",
+                    "description": "Core and legs",
+                    "durationMinutes": 25,
+                    "humanReadable": "WARM-UP: 3 min marching/light jog\n\nCIRCUIT (2 rounds):\n- 12 bodyweight squats\n- 12 glute bridges (hold 2 sec)\n- 10 lunges per leg\n- 25 sec plank\n- 10 single-leg calf raises each\n- 10 bird-dogs each side\n\nRest 30 sec between exercises\n\nCOOL-DOWN: 3 min stretching",
                     "completed": false
                   }
                 ]
@@ -42332,13 +42343,13 @@ ${a.join(`
                   {
                     "id": "w2-sat",
                     "sport": "run",
-                    "type": "easy",
-                    "name": "Easy Run",
-                    "description": "Recovery",
-                    "durationMinutes": 35,
-                    "distanceMeters": 6000,
-                    "primaryZone": "Zone 2",
-                    "humanReadable": "35 min easy",
+                    "type": "walk-run",
+                    "name": "Walk/Run + Strides",
+                    "description": "Aerobic with strides",
+                    "durationMinutes": 30,
+                    "distanceMiles": 2,
+                    "primaryZone": "Zone 1-2",
+                    "humanReadable": "WARM-UP: 5 min easy walk\n\nMAIN SET:\n4x (4 min run / 1 min walk)\n\nSTRIDES:\n3x 15 sec pickups\nFocus on quick turnover\nWalk 1 min between\n\nCOOL-DOWN: 3 min easy walk",
                     "completed": false
                   }
                 ]
@@ -42351,22 +42362,22 @@ ${a.join(`
                     "id": "w2-sun",
                     "sport": "run",
                     "type": "long",
-                    "name": "Long Run",
-                    "description": "Endurance building",
-                    "durationMinutes": 85,
-                    "distanceMeters": 16000,
-                    "primaryZone": "Zone 2",
-                    "humanReadable": "10 miles easy\nGel at mile 6",
+                    "name": "Long Walk/Run",
+                    "description": "Extended endurance",
+                    "durationMinutes": 40,
+                    "distanceMiles": 2.25,
+                    "primaryZone": "Zone 1-2",
+                    "humanReadable": "WARM-UP: 5 min easy walk\n\nMAIN SET:\n4x (5 min run / 2 min walk)\nPace: 11:00-12:00/mi\nThis should feel sustainable\n\nCOOL-DOWN: 5 min easy walk\n\nNOTE: 10% volume increase from last week",
                     "completed": false
                   }
                 ]
               }
             ],
             "summary": {
-              "totalHours": 5.5,
+              "totalHours": 2.5,
               "bySport": {
-                "run": { "sessions": 4, "hours": 4, "km": 39 },
-                "strength": { "sessions": 1, "hours": 0.6, "km": 0 }
+                "run": { "sessions": 4, "hours": 2.1, "miles": 7.75 },
+                "strength": { "sessions": 1, "hours": 0.42, "miles": 0 }
               }
             }
           },
@@ -42374,9 +42385,9 @@ ${a.join(`
             "weekNumber": 3,
             "startDate": "2025-01-20",
             "endDate": "2025-01-26",
-            "phase": "Base",
-            "focus": "Introduce fartlek",
-            "targetHours": 6,
+            "phase": "Base Building",
+            "focus": "Transition to continuous running",
+            "targetHours": 2.5,
             "isRecoveryWeek": false,
             "days": [
               {
@@ -42385,10 +42396,14 @@ ${a.join(`
                 "workouts": [
                   {
                     "id": "w3-mon",
-                    "sport": "rest",
-                    "type": "rest",
-                    "name": "Rest Day",
-                    "description": "Recovery",
+                    "sport": "run",
+                    "type": "easy",
+                    "name": "Easy Run",
+                    "description": "First continuous run",
+                    "durationMinutes": 25,
+                    "distanceMiles": 2,
+                    "primaryZone": "Zone 2",
+                    "humanReadable": "WARM-UP: 5 min brisk walk\n\nMAIN SET:\n15 min continuous easy running\nPace: 11:00-12:00/mi\nHR Zone 2 (138-151)\n\nIf needed: 1 min walk break\n\nCOOL-DOWN: 5 min easy walk",
                     "completed": false
                   }
                 ]
@@ -42399,14 +42414,10 @@ ${a.join(`
                 "workouts": [
                   {
                     "id": "w3-tue",
-                    "sport": "run",
-                    "type": "easy",
-                    "name": "Easy Run",
-                    "description": "Aerobic",
-                    "durationMinutes": 50,
-                    "distanceMeters": 9000,
-                    "primaryZone": "Zone 2",
-                    "humanReadable": "50 min easy",
+                    "sport": "rest",
+                    "type": "rest",
+                    "name": "Rest Day",
+                    "description": "Recovery",
                     "completed": false
                   }
                 ]
@@ -42418,13 +42429,13 @@ ${a.join(`
                   {
                     "id": "w3-wed",
                     "sport": "run",
-                    "type": "fartlek",
-                    "name": "Fartlek",
-                    "description": "Speed play",
-                    "durationMinutes": 45,
-                    "distanceMeters": 8500,
-                    "primaryZone": "Zone 2-3",
-                    "humanReadable": "10 min warm-up\n6x1 min fast/2 min easy\n10 min cool-down",
+                    "type": "easy",
+                    "name": "Easy Run",
+                    "description": "Building continuous run duration",
+                    "durationMinutes": 28,
+                    "distanceMiles": 2.25,
+                    "primaryZone": "Zone 2",
+                    "humanReadable": "WARM-UP: 5 min brisk walk\n\nMAIN SET:\n18 min continuous easy running\nStay conversational\nSlow down if breathing hard\n\nCOOL-DOWN: 5 min easy walk",
                     "completed": false
                   }
                 ]
@@ -42437,10 +42448,10 @@ ${a.join(`
                     "id": "w3-thu",
                     "sport": "strength",
                     "type": "strength",
-                    "name": "Strength",
-                    "description": "Core focus",
-                    "durationMinutes": 35,
-                    "humanReadable": "Core and hip stability work",
+                    "name": "Runner Strength",
+                    "description": "Progressive strength",
+                    "durationMinutes": 25,
+                    "humanReadable": "WARM-UP: 3 min dynamic movements\n\nCIRCUIT (2 rounds):\n- 12 squats with pause at bottom\n- 15 glute bridges\n- 10 reverse lunges per leg\n- 30 sec plank\n- 12 calf raises per leg\n- 10 side-lying leg raises each\n\nRest 30 sec between exercises\n\nCOOL-DOWN: 4 min stretching",
                     "completed": false
                   }
                 ]
@@ -42451,14 +42462,10 @@ ${a.join(`
                 "workouts": [
                   {
                     "id": "w3-fri",
-                    "sport": "run",
-                    "type": "recovery",
-                    "name": "Recovery Run",
-                    "description": "Easy shakeout",
-                    "durationMinutes": 30,
-                    "distanceMeters": 5000,
-                    "primaryZone": "Zone 1",
-                    "humanReadable": "30 min very easy",
+                    "sport": "rest",
+                    "type": "rest",
+                    "name": "Rest Day",
+                    "description": "Recovery",
                     "completed": false
                   }
                 ]
@@ -42471,12 +42478,12 @@ ${a.join(`
                     "id": "w3-sat",
                     "sport": "run",
                     "type": "easy",
-                    "name": "Easy Run",
-                    "description": "Pre-long run",
-                    "durationMinutes": 35,
-                    "distanceMeters": 6000,
+                    "name": "Easy Run + Strides",
+                    "description": "Aerobic with neuromuscular work",
+                    "durationMinutes": 32,
+                    "distanceMiles": 2.5,
                     "primaryZone": "Zone 2",
-                    "humanReadable": "35 min easy\n4x strides",
+                    "humanReadable": "WARM-UP: 5 min brisk walk\n\nMAIN SET:\n18 min easy running\nPace: 11:00-12:00/mi\n\nSTRIDES:\n4x 15 sec pickups\nSmooth acceleration, not sprinting\nWalk 1 min recovery between\n\nCOOL-DOWN: 3 min easy walk",
                     "completed": false
                   }
                 ]
@@ -42489,22 +42496,22 @@ ${a.join(`
                     "id": "w3-sun",
                     "sport": "run",
                     "type": "long",
-                    "name": "Long Run",
-                    "description": "Longest yet",
-                    "durationMinutes": 100,
-                    "distanceMeters": 19000,
+                    "name": "Long Easy Run",
+                    "description": "Longest continuous run yet",
+                    "durationMinutes": 40,
+                    "distanceMiles": 3,
                     "primaryZone": "Zone 2",
-                    "humanReadable": "12 miles easy\nPractice nutrition",
+                    "humanReadable": "WARM-UP: 5 min brisk walk\n\nMAIN SET:\n25-30 min continuous easy running\nPace: 11:00-12:30/mi\nKeep effort conversational\n\nIf tired: take 1-2 min walk breaks\n\nCOOL-DOWN: 5 min easy walk\n\nNOTE: Big milestone - your longest run!",
                     "completed": false
                   }
                 ]
               }
             ],
             "summary": {
-              "totalHours": 6,
+              "totalHours": 2.75,
               "bySport": {
-                "run": { "sessions": 5, "hours": 4.6, "km": 47.5 },
-                "strength": { "sessions": 1, "hours": 0.6, "km": 0 }
+                "run": { "sessions": 4, "hours": 2.3, "miles": 9.75 },
+                "strength": { "sessions": 1, "hours": 0.42, "miles": 0 }
               }
             }
           },
@@ -42512,9 +42519,9 @@ ${a.join(`
             "weekNumber": 4,
             "startDate": "2025-01-27",
             "endDate": "2025-02-02",
-            "phase": "Base",
-            "focus": "Recovery week",
-            "targetHours": 4.5,
+            "phase": "Recovery",
+            "focus": "Recovery week - absorb adaptations",
+            "targetHours": 1.75,
             "isRecoveryWeek": true,
             "days": [
               {
@@ -42523,10 +42530,14 @@ ${a.join(`
                 "workouts": [
                   {
                     "id": "w4-mon",
-                    "sport": "rest",
-                    "type": "rest",
-                    "name": "Rest Day",
-                    "description": "Recovery",
+                    "sport": "run",
+                    "type": "recovery",
+                    "name": "Recovery Run",
+                    "description": "Easy effort only",
+                    "durationMinutes": 20,
+                    "distanceMiles": 1.5,
+                    "primaryZone": "Zone 1-2",
+                    "humanReadable": "WARM-UP: 5 min easy walk\n\nMAIN SET:\n12 min VERY easy running\nSlower than normal\nHR Zone 1 preferred (under 138)\n\nCOOL-DOWN: 3 min walk",
                     "completed": false
                   }
                 ]
@@ -42537,14 +42548,10 @@ ${a.join(`
                 "workouts": [
                   {
                     "id": "w4-tue",
-                    "sport": "run",
-                    "type": "easy",
-                    "name": "Easy Run",
-                    "description": "Recovery week",
-                    "durationMinutes": 40,
-                    "distanceMeters": 7000,
-                    "primaryZone": "Zone 2",
-                    "humanReadable": "40 min easy",
+                    "sport": "rest",
+                    "type": "rest",
+                    "name": "Rest Day",
+                    "description": "Recovery",
                     "completed": false
                   }
                 ]
@@ -42555,12 +42562,14 @@ ${a.join(`
                 "workouts": [
                   {
                     "id": "w4-wed",
-                    "sport": "strength",
-                    "type": "strength",
-                    "name": "Light Strength",
-                    "description": "Mobility focus",
-                    "durationMinutes": 25,
-                    "humanReadable": "Light mobility work\nStretching",
+                    "sport": "run",
+                    "type": "easy",
+                    "name": "Easy Run",
+                    "description": "Light aerobic",
+                    "durationMinutes": 22,
+                    "distanceMiles": 1.75,
+                    "primaryZone": "Zone 2",
+                    "humanReadable": "WARM-UP: 5 min easy walk\n\nMAIN SET:\n14 min easy running\nRelaxed pace\nEnjoy the run!\n\nCOOL-DOWN: 3 min walk",
                     "completed": false
                   }
                 ]
@@ -42571,14 +42580,12 @@ ${a.join(`
                 "workouts": [
                   {
                     "id": "w4-thu",
-                    "sport": "run",
-                    "type": "easy",
-                    "name": "Easy Run",
-                    "description": "Short and easy",
-                    "durationMinutes": 35,
-                    "distanceMeters": 6000,
-                    "primaryZone": "Zone 2",
-                    "humanReadable": "35 min easy",
+                    "sport": "strength",
+                    "type": "strength",
+                    "name": "Light Mobility",
+                    "description": "Recovery focus",
+                    "durationMinutes": 15,
+                    "humanReadable": "MOBILITY WORK:\n- 10 bodyweight squats (slow)\n- 10 glute bridges\n- Hip circles each direction\n- 20 sec plank\n- Leg swings front/back\n- Leg swings side to side\n\nFOAM ROLLING (if available):\n- Quads, IT band, calves\n- 1 min each muscle group",
                     "completed": false
                   }
                 ]
@@ -42603,14 +42610,10 @@ ${a.join(`
                 "workouts": [
                   {
                     "id": "w4-sat",
-                    "sport": "run",
-                    "type": "easy",
-                    "name": "Easy Run",
-                    "description": "Shakeout",
-                    "durationMinutes": 30,
-                    "distanceMeters": 5000,
-                    "primaryZone": "Zone 2",
-                    "humanReadable": "30 min easy",
+                    "sport": "rest",
+                    "type": "rest",
+                    "name": "Rest Day",
+                    "description": "Extra recovery day this week",
                     "completed": false
                   }
                 ]
@@ -42622,23 +42625,23 @@ ${a.join(`
                   {
                     "id": "w4-sun",
                     "sport": "run",
-                    "type": "long",
-                    "name": "Long Run",
-                    "description": "Reduced volume",
-                    "durationMinutes": 70,
-                    "distanceMeters": 13000,
+                    "type": "easy",
+                    "name": "Easy Run + Strides",
+                    "description": "End recovery week fresh",
+                    "durationMinutes": 28,
+                    "distanceMiles": 2,
                     "primaryZone": "Zone 2",
-                    "humanReadable": "8 miles easy\nRecovery week",
+                    "humanReadable": "WARM-UP: 5 min brisk walk\n\nMAIN SET:\n15 min easy running\nFeeling refreshed?\n\nSTRIDES:\n3x 15 sec pickups\nShake out the legs\n\nCOOL-DOWN: 5 min walk\n\nNOTE: You should feel rested and ready for Build phase!",
                     "completed": false
                   }
                 ]
               }
             ],
             "summary": {
-              "totalHours": 4.5,
+              "totalHours": 1.75,
               "bySport": {
-                "run": { "sessions": 4, "hours": 3.5, "km": 31 },
-                "strength": { "sessions": 1, "hours": 0.4, "km": 0 }
+                "run": { "sessions": 3, "hours": 1.5, "miles": 5.25 },
+                "strength": { "sessions": 1, "hours": 0.25, "miles": 0 }
               }
             }
           },
@@ -42647,8 +42650,8 @@ ${a.join(`
             "startDate": "2025-02-03",
             "endDate": "2025-02-09",
             "phase": "Build",
-            "focus": "Introduce tempo",
-            "targetHours": 6.5,
+            "focus": "Increase volume, introduce tempo",
+            "targetHours": 2.75,
             "isRecoveryWeek": false,
             "days": [
               {
@@ -42657,10 +42660,14 @@ ${a.join(`
                 "workouts": [
                   {
                     "id": "w5-mon",
-                    "sport": "rest",
-                    "type": "rest",
-                    "name": "Rest Day",
-                    "description": "Recovery",
+                    "sport": "run",
+                    "type": "easy",
+                    "name": "Easy Run",
+                    "description": "Aerobic foundation",
+                    "durationMinutes": 28,
+                    "distanceMiles": 2.25,
+                    "primaryZone": "Zone 2",
+                    "humanReadable": "WARM-UP: 5 min brisk walk\n\nMAIN SET:\n20 min easy running\nPace: 11:00-12:00/mi\nHR Zone 2 (138-151)\n\nCOOL-DOWN: 3 min walk",
                     "completed": false
                   }
                 ]
@@ -42671,14 +42678,10 @@ ${a.join(`
                 "workouts": [
                   {
                     "id": "w5-tue",
-                    "sport": "run",
-                    "type": "easy",
-                    "name": "Easy Run",
-                    "description": "Aerobic",
-                    "durationMinutes": 50,
-                    "distanceMeters": 9000,
-                    "primaryZone": "Zone 2",
-                    "humanReadable": "50 min easy",
+                    "sport": "rest",
+                    "type": "rest",
+                    "name": "Rest Day",
+                    "description": "Recovery",
                     "completed": false
                   }
                 ]
@@ -42691,12 +42694,12 @@ ${a.join(`
                     "id": "w5-wed",
                     "sport": "run",
                     "type": "tempo",
-                    "name": "Tempo Run",
-                    "description": "Threshold work",
-                    "durationMinutes": 50,
-                    "distanceMeters": 10000,
-                    "primaryZone": "Zone 3-4",
-                    "humanReadable": "15 min warm-up\n20 min tempo @ 7:50-8:00/mi\n15 min cool-down",
+                    "name": "Tempo Intro",
+                    "description": "First quality workout",
+                    "durationMinutes": 30,
+                    "distanceMiles": 2.5,
+                    "primaryZone": "Zone 2-3",
+                    "humanReadable": "WARM-UP: 5 min easy jog\n\nMAIN SET:\n3x (2 min tempo / 2 min easy)\nTempo pace: 10:00-10:30/mi\nHR Zone 3 (151-160)\nComfortably hard - can speak short sentences\n\nCOOL-DOWN: 5 min easy jog to walk\n\nNOTE: First tempo work - stay controlled!",
                     "completed": false
                   }
                 ]
@@ -42709,10 +42712,10 @@ ${a.join(`
                     "id": "w5-thu",
                     "sport": "strength",
                     "type": "strength",
-                    "name": "Strength",
-                    "description": "Running strength",
-                    "durationMinutes": 35,
-                    "humanReadable": "Single leg work\nCore stability",
+                    "name": "Runner Strength",
+                    "description": "Build phase strength",
+                    "durationMinutes": 25,
+                    "humanReadable": "WARM-UP: 3 min dynamic movements\n\nCIRCUIT (2-3 rounds):\n- 12 squats\n- 15 glute bridges\n- 10 step-ups per leg (use stairs)\n- 30 sec plank\n- 10 single-leg deadlift per side\n- 12 calf raises per leg\n\nRest 30 sec between exercises\n\nCOOL-DOWN: 4 min stretching",
                     "completed": false
                   }
                 ]
@@ -42723,14 +42726,10 @@ ${a.join(`
                 "workouts": [
                   {
                     "id": "w5-fri",
-                    "sport": "run",
-                    "type": "recovery",
-                    "name": "Recovery Run",
-                    "description": "Easy",
-                    "durationMinutes": 30,
-                    "distanceMeters": 5000,
-                    "primaryZone": "Zone 1",
-                    "humanReadable": "30 min recovery",
+                    "sport": "rest",
+                    "type": "rest",
+                    "name": "Rest Day",
+                    "description": "Recovery",
                     "completed": false
                   }
                 ]
@@ -42743,12 +42742,12 @@ ${a.join(`
                     "id": "w5-sat",
                     "sport": "run",
                     "type": "easy",
-                    "name": "Easy Run",
-                    "description": "Pre-long",
-                    "durationMinutes": 40,
-                    "distanceMeters": 7000,
+                    "name": "Easy Run + Strides",
+                    "description": "Aerobic with strides",
+                    "durationMinutes": 30,
+                    "distanceMiles": 2.5,
                     "primaryZone": "Zone 2",
-                    "humanReadable": "40 min easy\nStrides",
+                    "humanReadable": "WARM-UP: 5 min easy jog\n\nMAIN SET:\n18 min easy running\n\nSTRIDES:\n4x 20 sec pickups\nGradual acceleration\nWalk 1 min between\n\nCOOL-DOWN: 3 min walk",
                     "completed": false
                   }
                 ]
@@ -42761,22 +42760,22 @@ ${a.join(`
                     "id": "w5-sun",
                     "sport": "run",
                     "type": "long",
-                    "name": "Long Run",
-                    "description": "Building back up",
-                    "durationMinutes": 105,
-                    "distanceMeters": 21000,
+                    "name": "Long Easy Run",
+                    "description": "Building endurance",
+                    "durationMinutes": 40,
+                    "distanceMiles": 3.25,
                     "primaryZone": "Zone 2",
-                    "humanReadable": "13 miles\nLast 3 at MP feel",
+                    "humanReadable": "WARM-UP: 5 min brisk walk\n\nMAIN SET:\n30 min continuous easy running\nPace: 11:00-12:00/mi\nStay relaxed and conversational\n\nCOOL-DOWN: 5 min walk\n\nNOTE: Practice race-day hydration - drink water before/after",
                     "completed": false
                   }
                 ]
               }
             ],
             "summary": {
-              "totalHours": 6.5,
+              "totalHours": 2.9,
               "bySport": {
-                "run": { "sessions": 5, "hours": 5, "km": 52 },
-                "strength": { "sessions": 1, "hours": 0.6, "km": 0 }
+                "run": { "sessions": 4, "hours": 2.5, "miles": 10.5 },
+                "strength": { "sessions": 1, "hours": 0.42, "miles": 0 }
               }
             }
           },
@@ -42785,8 +42784,8 @@ ${a.join(`
             "startDate": "2025-02-10",
             "endDate": "2025-02-16",
             "phase": "Build",
-            "focus": "Marathon pace work",
-            "targetHours": 7,
+            "focus": "Develop race-specific fitness",
+            "targetHours": 3,
             "isRecoveryWeek": false,
             "days": [
               {
@@ -42795,10 +42794,14 @@ ${a.join(`
                 "workouts": [
                   {
                     "id": "w6-mon",
-                    "sport": "rest",
-                    "type": "rest",
-                    "name": "Rest Day",
-                    "description": "Recovery",
+                    "sport": "run",
+                    "type": "easy",
+                    "name": "Easy Run",
+                    "description": "Aerobic maintenance",
+                    "durationMinutes": 30,
+                    "distanceMiles": 2.5,
+                    "primaryZone": "Zone 2",
+                    "humanReadable": "WARM-UP: 5 min brisk walk\n\nMAIN SET:\n22 min easy running\nPace: 11:00-12:00/mi\nRelax and enjoy\n\nCOOL-DOWN: 3 min walk",
                     "completed": false
                   }
                 ]
@@ -42809,14 +42812,10 @@ ${a.join(`
                 "workouts": [
                   {
                     "id": "w6-tue",
-                    "sport": "run",
-                    "type": "easy",
-                    "name": "Easy Run",
-                    "description": "Aerobic",
-                    "durationMinutes": 55,
-                    "distanceMeters": 10000,
-                    "primaryZone": "Zone 2",
-                    "humanReadable": "55 min easy",
+                    "sport": "rest",
+                    "type": "rest",
+                    "name": "Rest Day",
+                    "description": "Recovery",
                     "completed": false
                   }
                 ]
@@ -42828,13 +42827,13 @@ ${a.join(`
                   {
                     "id": "w6-wed",
                     "sport": "run",
-                    "type": "intervals",
-                    "name": "MP Intervals",
-                    "description": "Marathon pace",
-                    "durationMinutes": 55,
-                    "distanceMeters": 11000,
+                    "type": "tempo",
+                    "name": "Tempo Run",
+                    "description": "Building threshold",
+                    "durationMinutes": 32,
+                    "distanceMiles": 2.75,
                     "primaryZone": "Zone 3",
-                    "humanReadable": "15 min warm-up\n4x8 min @ MP\n2 min jog between\n10 min cool-down",
+                    "humanReadable": "WARM-UP: 6 min easy jog\n\nMAIN SET:\n2x (4 min tempo / 2 min easy)\nTempo pace: 10:00-10:30/mi\nHR Zone 3 (151-160)\n\nCOOL-DOWN: 6 min easy jog to walk\n\nNOTE: Longer tempo intervals - stay patient",
                     "completed": false
                   }
                 ]
@@ -42847,10 +42846,10 @@ ${a.join(`
                     "id": "w6-thu",
                     "sport": "strength",
                     "type": "strength",
-                    "name": "Strength",
-                    "description": "Power work",
-                    "durationMinutes": 35,
-                    "humanReadable": "Explosive movements\nCore work",
+                    "name": "Runner Strength",
+                    "description": "Injury prevention",
+                    "durationMinutes": 25,
+                    "humanReadable": "WARM-UP: 3 min dynamic movements\n\nCIRCUIT (2-3 rounds):\n- 12 squats with 2 sec pause\n- 15 glute bridges\n- 12 lateral lunges per side\n- 35 sec plank\n- 10 single-leg RDL per side\n- 15 calf raises per leg\n\nRest 30 sec between exercises\n\nCOOL-DOWN: 4 min stretching",
                     "completed": false
                   }
                 ]
@@ -42861,14 +42860,10 @@ ${a.join(`
                 "workouts": [
                   {
                     "id": "w6-fri",
-                    "sport": "run",
-                    "type": "recovery",
-                    "name": "Recovery Run",
-                    "description": "Easy",
-                    "durationMinutes": 35,
-                    "distanceMeters": 6000,
-                    "primaryZone": "Zone 1",
-                    "humanReadable": "35 min recovery",
+                    "sport": "rest",
+                    "type": "rest",
+                    "name": "Rest Day",
+                    "description": "Recovery",
                     "completed": false
                   }
                 ]
@@ -42881,12 +42876,12 @@ ${a.join(`
                     "id": "w6-sat",
                     "sport": "run",
                     "type": "easy",
-                    "name": "Easy Run",
-                    "description": "Pre-long",
-                    "durationMinutes": 40,
-                    "distanceMeters": 7000,
+                    "name": "Easy Run + Strides",
+                    "description": "Aerobic with neuromuscular",
+                    "durationMinutes": 32,
+                    "distanceMiles": 2.75,
                     "primaryZone": "Zone 2",
-                    "humanReadable": "40 min easy",
+                    "humanReadable": "WARM-UP: 5 min easy jog\n\nMAIN SET:\n20 min easy running\n\nSTRIDES:\n5x 20 sec pickups\nSmooth and controlled\nWalk 1 min between\n\nCOOL-DOWN: 3 min walk",
                     "completed": false
                   }
                 ]
@@ -42899,22 +42894,22 @@ ${a.join(`
                     "id": "w6-sun",
                     "sport": "run",
                     "type": "long",
-                    "name": "Long Run",
-                    "description": "With MP miles",
-                    "durationMinutes": 120,
-                    "distanceMeters": 24000,
+                    "name": "Long Run with Pickup",
+                    "description": "Race simulation",
+                    "durationMinutes": 45,
+                    "distanceMiles": 3.5,
                     "primaryZone": "Zone 2-3",
-                    "humanReadable": "15 miles\nMiles 10-13 at MP",
+                    "humanReadable": "WARM-UP: 5 min brisk walk\n\nMAIN SET:\n25 min easy running\nThen: 5 min at tempo effort (10:00-10:30/mi)\n\nCOOL-DOWN: 5 min easy jog to walk\n\nNOTE: Practice finishing strong like race day!",
                     "completed": false
                   }
                 ]
               }
             ],
             "summary": {
-              "totalHours": 7,
+              "totalHours": 3.1,
               "bySport": {
-                "run": { "sessions": 5, "hours": 5.5, "km": 58 },
-                "strength": { "sessions": 1, "hours": 0.6, "km": 0 }
+                "run": { "sessions": 4, "hours": 2.7, "miles": 11.5 },
+                "strength": { "sessions": 1, "hours": 0.42, "miles": 0 }
               }
             }
           },
@@ -42923,8 +42918,8 @@ ${a.join(`
             "startDate": "2025-02-17",
             "endDate": "2025-02-23",
             "phase": "Build",
-            "focus": "Peak mileage week",
-            "targetHours": 7.5,
+            "focus": "Peak week - highest volume",
+            "targetHours": 3.25,
             "isRecoveryWeek": false,
             "days": [
               {
@@ -42933,10 +42928,14 @@ ${a.join(`
                 "workouts": [
                   {
                     "id": "w7-mon",
-                    "sport": "rest",
-                    "type": "rest",
-                    "name": "Rest Day",
-                    "description": "Recovery",
+                    "sport": "run",
+                    "type": "easy",
+                    "name": "Easy Run",
+                    "description": "Aerobic base",
+                    "durationMinutes": 32,
+                    "distanceMiles": 2.75,
+                    "primaryZone": "Zone 2",
+                    "humanReadable": "WARM-UP: 5 min brisk walk\n\nMAIN SET:\n24 min easy running\nPace: 11:00-12:00/mi\nFeeling good!\n\nCOOL-DOWN: 3 min walk",
                     "completed": false
                   }
                 ]
@@ -42947,14 +42946,10 @@ ${a.join(`
                 "workouts": [
                   {
                     "id": "w7-tue",
-                    "sport": "run",
-                    "type": "easy",
-                    "name": "Easy Run",
-                    "description": "Aerobic",
-                    "durationMinutes": 55,
-                    "distanceMeters": 10000,
-                    "primaryZone": "Zone 2",
-                    "humanReadable": "55 min easy",
+                    "sport": "rest",
+                    "type": "rest",
+                    "name": "Rest Day",
+                    "description": "Recovery",
                     "completed": false
                   }
                 ]
@@ -42967,12 +42962,12 @@ ${a.join(`
                     "id": "w7-wed",
                     "sport": "run",
                     "type": "tempo",
-                    "name": "Tempo Run",
-                    "description": "Threshold",
-                    "durationMinutes": 55,
-                    "distanceMeters": 11000,
-                    "primaryZone": "Zone 4",
-                    "humanReadable": "15 min warm-up\n25 min tempo\n15 min cool-down",
+                    "name": "Race Pace Workout",
+                    "description": "5K pace practice",
+                    "durationMinutes": 35,
+                    "distanceMiles": 3,
+                    "primaryZone": "Zone 3-4",
+                    "humanReadable": "WARM-UP: 8 min easy jog\n\nMAIN SET:\n3x (3 min at goal 5K pace / 2 min easy)\nGoal pace: 9:30/mi\nHR may reach Zone 4 (160-170)\n\nCOOL-DOWN: 6 min easy jog to walk\n\nNOTE: This is race pace! Feel what it's like.",
                     "completed": false
                   }
                 ]
@@ -42983,14 +42978,12 @@ ${a.join(`
                 "workouts": [
                   {
                     "id": "w7-thu",
-                    "sport": "run",
-                    "type": "easy",
-                    "name": "Easy Run",
-                    "description": "Recovery",
-                    "durationMinutes": 40,
-                    "distanceMeters": 7000,
-                    "primaryZone": "Zone 2",
-                    "humanReadable": "40 min easy",
+                    "sport": "strength",
+                    "type": "strength",
+                    "name": "Runner Strength",
+                    "description": "Final hard strength session",
+                    "durationMinutes": 25,
+                    "humanReadable": "WARM-UP: 3 min dynamic movements\n\nCIRCUIT (2-3 rounds):\n- 15 squats\n- 15 glute bridges\n- 12 reverse lunges per leg\n- 40 sec plank\n- 10 single-leg RDL per side\n- 15 calf raises per leg\n\nRest 30 sec between exercises\n\nCOOL-DOWN: 4 min stretching\n\nNOTE: Last hard strength before taper",
                     "completed": false
                   }
                 ]
@@ -43001,12 +42994,10 @@ ${a.join(`
                 "workouts": [
                   {
                     "id": "w7-fri",
-                    "sport": "strength",
-                    "type": "strength",
-                    "name": "Light Strength",
-                    "description": "Maintenance",
-                    "durationMinutes": 30,
-                    "humanReadable": "Light session\nMobility focus",
+                    "sport": "rest",
+                    "type": "rest",
+                    "name": "Rest Day",
+                    "description": "Recovery",
                     "completed": false
                   }
                 ]
@@ -43019,12 +43010,12 @@ ${a.join(`
                     "id": "w7-sat",
                     "sport": "run",
                     "type": "easy",
-                    "name": "Easy Run",
-                    "description": "Pre-long",
-                    "durationMinutes": 40,
-                    "distanceMeters": 7000,
+                    "name": "Easy Run + Strides",
+                    "description": "Pre-long run shakeout",
+                    "durationMinutes": 30,
+                    "distanceMiles": 2.5,
                     "primaryZone": "Zone 2",
-                    "humanReadable": "40 min easy",
+                    "humanReadable": "WARM-UP: 5 min easy jog\n\nMAIN SET:\n18 min easy running\n\nSTRIDES:\n4x 20 sec pickups\nSmooth turnover\nWalk 1 min between\n\nCOOL-DOWN: 3 min walk",
                     "completed": false
                   }
                 ]
@@ -43037,22 +43028,22 @@ ${a.join(`
                     "id": "w7-sun",
                     "sport": "run",
                     "type": "long",
-                    "name": "Long Run",
-                    "description": "Peak long run",
-                    "durationMinutes": 140,
-                    "distanceMeters": 27000,
-                    "primaryZone": "Zone 2",
-                    "humanReadable": "17 miles\nPractice race nutrition",
+                    "name": "Dress Rehearsal",
+                    "description": "Race simulation run",
+                    "durationMinutes": 45,
+                    "distanceMiles": 3.75,
+                    "primaryZone": "Zone 2-3",
+                    "humanReadable": "WARM-UP: 5 min brisk walk/easy jog\n\nMAIN SET:\n30 min at easy effort\nFinal 8 min: practice race pace (9:30/mi)\n\nCOOL-DOWN: 5 min easy walk\n\nNOTE: Full race rehearsal!\n- Wear race day shoes/clothes\n- Eat breakfast you'll eat race morning\n- Visualize race success",
                     "completed": false
                   }
                 ]
               }
             ],
             "summary": {
-              "totalHours": 7.5,
+              "totalHours": 3.35,
               "bySport": {
-                "run": { "sessions": 5, "hours": 6, "km": 62 },
-                "strength": { "sessions": 1, "hours": 0.5, "km": 0 }
+                "run": { "sessions": 4, "hours": 2.93, "miles": 12 },
+                "strength": { "sessions": 1, "hours": 0.42, "miles": 0 }
               }
             }
           },
@@ -43060,9 +43051,9 @@ ${a.join(`
             "weekNumber": 8,
             "startDate": "2025-02-24",
             "endDate": "2025-03-02",
-            "phase": "Build",
-            "focus": "Recovery week",
-            "targetHours": 5,
+            "phase": "Taper & Race",
+            "focus": "Reduce volume, maintain sharpness, RACE DAY!",
+            "targetHours": 2,
             "isRecoveryWeek": true,
             "days": [
               {
@@ -43071,10 +43062,14 @@ ${a.join(`
                 "workouts": [
                   {
                     "id": "w8-mon",
-                    "sport": "rest",
-                    "type": "rest",
-                    "name": "Rest Day",
-                    "description": "Recovery",
+                    "sport": "run",
+                    "type": "easy",
+                    "name": "Easy Shakeout",
+                    "description": "Taper begins",
+                    "durationMinutes": 22,
+                    "distanceMiles": 1.75,
+                    "primaryZone": "Zone 2",
+                    "humanReadable": "WARM-UP: 4 min brisk walk\n\nMAIN SET:\n15 min easy running\nVERY relaxed pace\nJust moving the legs\n\nCOOL-DOWN: 3 min walk\n\nNOTE: Taper week! Trust your training.",
                     "completed": false
                   }
                 ]
@@ -43085,14 +43080,10 @@ ${a.join(`
                 "workouts": [
                   {
                     "id": "w8-tue",
-                    "sport": "run",
-                    "type": "easy",
-                    "name": "Easy Run",
+                    "sport": "rest",
+                    "type": "rest",
+                    "name": "Rest Day",
                     "description": "Recovery",
-                    "durationMinutes": 40,
-                    "distanceMeters": 7000,
-                    "primaryZone": "Zone 2",
-                    "humanReadable": "40 min easy",
                     "completed": false
                   }
                 ]
@@ -43104,13 +43095,13 @@ ${a.join(`
                   {
                     "id": "w8-wed",
                     "sport": "run",
-                    "type": "fartlek",
-                    "name": "Light Fartlek",
-                    "description": "Keep legs sharp",
-                    "durationMinutes": 40,
-                    "distanceMeters": 7500,
+                    "type": "tempo",
+                    "name": "Short Race Pace",
+                    "description": "Stay sharp",
+                    "durationMinutes": 25,
+                    "distanceMiles": 2,
                     "primaryZone": "Zone 2-3",
-                    "humanReadable": "10 min warm-up\n4x30s pickup\n10 min cool-down",
+                    "humanReadable": "WARM-UP: 6 min easy jog\n\nMAIN SET:\n2x (2 min at race pace / 2 min easy)\nRace pace: 9:30/mi\nFeel controlled and smooth\n\nSTRIDES:\n3x 15 sec pickups\n\nCOOL-DOWN: 5 min easy jog to walk\n\nNOTE: Short and snappy - stay fresh!",
                     "completed": false
                   }
                 ]
@@ -43121,10 +43112,12 @@ ${a.join(`
                 "workouts": [
                   {
                     "id": "w8-thu",
-                    "sport": "rest",
-                    "type": "rest",
-                    "name": "Rest Day",
-                    "description": "Recovery",
+                    "sport": "strength",
+                    "type": "strength",
+                    "name": "Light Mobility",
+                    "description": "Pre-race mobility",
+                    "durationMinutes": 15,
+                    "humanReadable": "LIGHT MOBILITY:\n- 8 bodyweight squats (slow)\n- 10 glute bridges\n- Hip circles\n- Leg swings\n- 20 sec plank\n\nFOAM ROLLING:\n- Quads, calves, glutes\n- 1 min each\n\nNOTE: Keep it light - just stay loose",
                     "completed": false
                   }
                 ]
@@ -43137,12 +43130,12 @@ ${a.join(`
                     "id": "w8-fri",
                     "sport": "run",
                     "type": "easy",
-                    "name": "Easy Run",
-                    "description": "Shakeout",
-                    "durationMinutes": 30,
-                    "distanceMeters": 5000,
-                    "primaryZone": "Zone 2",
-                    "humanReadable": "30 min easy",
+                    "name": "Pre-Race Shakeout",
+                    "description": "Final tuneup",
+                    "durationMinutes": 20,
+                    "distanceMiles": 1.5,
+                    "primaryZone": "Zone 1-2",
+                    "humanReadable": "WARM-UP: 3 min walk\n\nMAIN SET:\n10 min VERY easy running\n\nSTRIDES:\n4x 15 sec pickups\nSmooth acceleration\nWalk back between\n\nCOOL-DOWN: 3 min walk\n\nNOTE: Last run before race! Keep it short and sweet.",
                     "completed": false
                   }
                 ]
@@ -43153,12 +43146,11 @@ ${a.join(`
                 "workouts": [
                   {
                     "id": "w8-sat",
-                    "sport": "strength",
-                    "type": "strength",
-                    "name": "Light Strength",
-                    "description": "Mobility",
-                    "durationMinutes": 25,
-                    "humanReadable": "Stretching\nMobility work",
+                    "sport": "rest",
+                    "type": "rest",
+                    "name": "Pre-Race Rest",
+                    "description": "Rest and prepare",
+                    "humanReadable": "RACE PREP:\n- Lay out race clothes and shoes\n- Pin bib number to shirt\n- Set two alarms\n- Eat a familiar carb-rich dinner\n- Stay hydrated (not too much)\n- Visualize your race\n- Get to bed early!\n\nYOU ARE READY!",
                     "completed": false
                   }
                 ]
@@ -43170,319 +43162,73 @@ ${a.join(`
                   {
                     "id": "w8-sun",
                     "sport": "run",
-                    "type": "long",
-                    "name": "Long Run",
-                    "description": "Reduced",
-                    "durationMinutes": 80,
-                    "distanceMeters": 15000,
-                    "primaryZone": "Zone 2",
-                    "humanReadable": "10 miles easy\nRecovery week",
-                    "completed": false
-                  }
-                ]
-              }
-            ],
-            "summary": {
-              "totalHours": 5,
-              "bySport": {
-                "run": { "sessions": 4, "hours": 3.8, "km": 34.5 },
-                "strength": { "sessions": 1, "hours": 0.4, "km": 0 }
-              }
-            }
-          },
-          {
-            "weekNumber": 9,
-            "startDate": "2025-03-03",
-            "endDate": "2025-03-09",
-            "phase": "Peak",
-            "focus": "Dress rehearsal",
-            "targetHours": 7,
-            "isRecoveryWeek": false,
-            "days": [
-              {
-                "date": "2025-03-03",
-                "dayOfWeek": "Monday",
-                "workouts": [
-                  {
-                    "id": "w9-mon",
-                    "sport": "rest",
-                    "type": "rest",
-                    "name": "Rest Day",
-                    "description": "Recovery",
-                    "completed": false
-                  }
-                ]
-              },
-              {
-                "date": "2025-03-04",
-                "dayOfWeek": "Tuesday",
-                "workouts": [
-                  {
-                    "id": "w9-tue",
-                    "sport": "run",
-                    "type": "easy",
-                    "name": "Easy Run",
-                    "description": "Aerobic",
-                    "durationMinutes": 50,
-                    "distanceMeters": 9000,
-                    "primaryZone": "Zone 2",
-                    "humanReadable": "50 min easy",
-                    "completed": false
-                  }
-                ]
-              },
-              {
-                "date": "2025-03-05",
-                "dayOfWeek": "Wednesday",
-                "workouts": [
-                  {
-                    "id": "w9-wed",
-                    "sport": "run",
-                    "type": "intervals",
-                    "name": "Race Simulation",
-                    "description": "MP workout",
-                    "durationMinutes": 60,
-                    "distanceMeters": 12000,
-                    "primaryZone": "Zone 3",
-                    "humanReadable": "10 min warm-up\n30 min @ MP\n10 min easy\n10 min cool-down",
-                    "completed": false
-                  }
-                ]
-              },
-              {
-                "date": "2025-03-06",
-                "dayOfWeek": "Thursday",
-                "workouts": [
-                  {
-                    "id": "w9-thu",
-                    "sport": "run",
-                    "type": "easy",
-                    "name": "Easy Run",
-                    "description": "Recovery",
-                    "durationMinutes": 40,
-                    "distanceMeters": 7000,
-                    "primaryZone": "Zone 2",
-                    "humanReadable": "40 min easy",
-                    "completed": false
-                  }
-                ]
-              },
-              {
-                "date": "2025-03-07",
-                "dayOfWeek": "Friday",
-                "workouts": [
-                  {
-                    "id": "w9-fri",
-                    "sport": "rest",
-                    "type": "rest",
-                    "name": "Rest Day",
-                    "description": "Recovery",
-                    "completed": false
-                  }
-                ]
-              },
-              {
-                "date": "2025-03-08",
-                "dayOfWeek": "Saturday",
-                "workouts": [
-                  {
-                    "id": "w9-sat",
-                    "sport": "run",
-                    "type": "easy",
-                    "name": "Easy Run + Strides",
-                    "description": "Pre-long",
-                    "durationMinutes": 35,
-                    "distanceMeters": 6000,
-                    "primaryZone": "Zone 2",
-                    "humanReadable": "30 min easy\n5x strides",
-                    "completed": false
-                  }
-                ]
-              },
-              {
-                "date": "2025-03-09",
-                "dayOfWeek": "Sunday",
-                "workouts": [
-                  {
-                    "id": "w9-sun",
-                    "sport": "run",
-                    "type": "long",
-                    "name": "Dress Rehearsal",
-                    "description": "Race simulation",
-                    "durationMinutes": 135,
-                    "distanceMeters": 26000,
-                    "primaryZone": "Zone 2-3",
-                    "humanReadable": "16 miles\nMiles 8-14 at MP\nFull race nutrition",
-                    "completed": false
-                  }
-                ]
-              }
-            ],
-            "summary": {
-              "totalHours": 7,
-              "bySport": { "run": { "sessions": 5, "hours": 5.5, "km": 60 } }
-            }
-          },
-          {
-            "weekNumber": 10,
-            "startDate": "2025-03-10",
-            "endDate": "2025-03-16",
-            "phase": "Peak",
-            "focus": "Final big week",
-            "targetHours": 6.5,
-            "isRecoveryWeek": false,
-            "days": [
-              {
-                "date": "2025-03-10",
-                "dayOfWeek": "Monday",
-                "workouts": [
-                  {
-                    "id": "w10-mon",
-                    "sport": "rest",
-                    "type": "rest",
-                    "name": "Rest Day",
-                    "description": "Recovery",
-                    "completed": false
-                  }
-                ]
-              },
-              {
-                "date": "2025-03-11",
-                "dayOfWeek": "Tuesday",
-                "workouts": [
-                  {
-                    "id": "w10-tue",
-                    "sport": "run",
-                    "type": "easy",
-                    "name": "Easy Run",
-                    "description": "Aerobic",
+                    "type": "race",
+                    "name": "RACE DAY - 5K!",
+                    "description": "Your first 5K!",
                     "durationMinutes": 45,
-                    "distanceMeters": 8000,
-                    "primaryZone": "Zone 2",
-                    "humanReadable": "45 min easy",
-                    "completed": false
-                  }
-                ]
-              },
-              {
-                "date": "2025-03-12",
-                "dayOfWeek": "Wednesday",
-                "workouts": [
-                  {
-                    "id": "w10-wed",
-                    "sport": "run",
-                    "type": "tempo",
-                    "name": "Tempo Run",
-                    "description": "Final quality",
-                    "durationMinutes": 50,
-                    "distanceMeters": 10000,
-                    "primaryZone": "Zone 4",
-                    "humanReadable": "15 min warm-up\n20 min tempo\n15 min cool-down",
-                    "completed": false
-                  }
-                ]
-              },
-              {
-                "date": "2025-03-13",
-                "dayOfWeek": "Thursday",
-                "workouts": [
-                  {
-                    "id": "w10-thu",
-                    "sport": "run",
-                    "type": "easy",
-                    "name": "Easy Run",
-                    "description": "Recovery",
-                    "durationMinutes": 40,
-                    "distanceMeters": 7000,
-                    "primaryZone": "Zone 2",
-                    "humanReadable": "40 min easy",
-                    "completed": false
-                  }
-                ]
-              },
-              {
-                "date": "2025-03-14",
-                "dayOfWeek": "Friday",
-                "workouts": [
-                  {
-                    "id": "w10-fri",
-                    "sport": "rest",
-                    "type": "rest",
-                    "name": "Rest Day",
-                    "description": "Recovery",
-                    "completed": false
-                  }
-                ]
-              },
-              {
-                "date": "2025-03-15",
-                "dayOfWeek": "Saturday",
-                "workouts": [
-                  {
-                    "id": "w10-sat",
-                    "sport": "run",
-                    "type": "easy",
-                    "name": "Easy Run",
-                    "description": "Pre-long",
-                    "durationMinutes": 35,
-                    "distanceMeters": 6000,
-                    "primaryZone": "Zone 2",
-                    "humanReadable": "35 min easy\nStrides",
-                    "completed": false
-                  }
-                ]
-              },
-              {
-                "date": "2025-03-16",
-                "dayOfWeek": "Sunday",
-                "workouts": [
-                  {
-                    "id": "w10-sun",
-                    "sport": "run",
-                    "type": "long",
-                    "name": "Long Run",
-                    "description": "Last long run",
-                    "durationMinutes": 120,
-                    "distanceMeters": 23000,
-                    "primaryZone": "Zone 2",
-                    "humanReadable": "14 miles easy\nConfidence builder",
+                    "distanceMiles": 3.1,
+                    "primaryZone": "Zone 4-5",
+                    "humanReadable": "RACE MORNING:\n- Wake 2-3 hours before race\n- Light breakfast: toast/banana/oatmeal\n- Arrive 45 min early\n- Light jog warm-up (5 min)\n- Strides to wake up legs\n\nRACE STRATEGY:\nMile 1: 9:45-10:00/mi (START EASY!)\nMile 2: 9:30/mi (settle in)\nMile 3: 9:15-9:30/mi (hold strong)\nFinal 0.1: Give it everything!\n\nGOAL: Sub-30:00 (9:40/mi avg)\n\nPOST-RACE:\n- Walk to cool down\n- Stretch gently\n- Hydrate and refuel\n- CELEBRATE! You did it!",
                     "completed": false
                   }
                 ]
               }
             ],
             "summary": {
-              "totalHours": 6.5,
-              "bySport": { "run": { "sessions": 5, "hours": 5.2, "km": 54 } }
+              "totalHours": 2.1,
+              "bySport": {
+                "run": { "sessions": 4, "hours": 1.85, "miles": 8.35 },
+                "strength": { "sessions": 1, "hours": 0.25, "miles": 0 }
+              }
             }
           }
         ],
         "raceStrategy": {
           "event": {
-            "name": "Boston Marathon",
-            "date": "2025-04-21",
-            "type": "marathon",
-            "distances": { "run": 42195 }
+            "name": "First 5K Race",
+            "date": "2025-03-02",
+            "type": "5K",
+            "distances": { "run": 5000 }
           },
           "pacing": {
             "run": {
-              "target": "8:55-9:05/mi",
-              "notes": "Start conservative. Respect the Newton Hills (miles 16-21)."
+              "target": "9:30-9:40/mi average",
+              "notes": "Start conservative! The first mile should feel too easy.",
+              "splits": {
+                "mile1": "9:45-10:00/mi - Hold back, find rhythm",
+                "mile2": "9:30/mi - Settle into goal pace",
+                "mile3": "9:15-9:30/mi - Hold strong, don't slow",
+                "final0.1": "All out to the finish line!"
+              }
             }
           },
           "nutrition": {
-            "preRace": "3 hours before: Bagel with PB, banana",
-            "during": {
-              "carbsPerHour": 60,
-              "fluidPerHour": "500-700ml",
-              "products": ["Maurten Gel 100"]
+            "preRace": {
+              "nightBefore": "Carb-focused dinner (pasta, rice). Avoid high fiber, spicy, or unfamiliar foods.",
+              "raceDay": "Wake 2-3 hours before. Light, familiar breakfast: toast with peanut butter, banana, or oatmeal. Nothing new on race day!"
             },
-            "notes": "Gel every 45 min starting at mile 5"
+            "during": {
+              "hydration": "For a 5K, you likely don't need to drink during the race. Hydrate well the day before.",
+              "fuel": "Not needed for 5K distance - your body has enough glycogen stored."
+            },
+            "postRace": "Drink water or sports drink. Eat within 30-60 min - protein and carbs."
+          },
+          "logistics": {
+            "arrivalTime": "45-60 minutes before race start",
+            "warmup": "5-10 min easy jog, 3-4 strides, dynamic stretches",
+            "gear": "Wear race shoes you've trained in. Nothing new on race day!",
+            "positioning": "Start toward the back of your pace group - you can always pass people"
+          },
+          "mentalStrategy": {
+            "mile1": "Focus on staying relaxed. Count breaths. Let faster runners go.",
+            "mile2": "Find someone running your pace and tuck in. Stay smooth.",
+            "mile3": "This is where it gets hard. Break it into chunks. One lamppost at a time.",
+            "finish": "When you see the finish, give everything you have left!"
           },
           "taper": {
-            "startDate": "2025-04-07",
+            "startDate": "2025-02-24",
             "volumeReduction": 50,
-            "notes": "Trust your training"
+            "notes": "Trust your training! Feeling antsy or extra energy is normal during taper. Keep runs short and easy."
           }
         }
       }
