@@ -669,30 +669,72 @@ export interface ModifyOptions {
 }
 
 /**
- * Extract plan ID and changes from backup localStorage data
+ * Extract plan ID, changes, and completed status from backup localStorage data
  */
-function extractChangesFromBackup(backupData: BackupData): {
+function extractDataFromBackup(backupData: BackupData): {
   planId: string | null;
   changes: PlanChanges | null;
+  completed: Record<string, boolean> | null;
 } {
   // Find the changes key (format: "plan-{id}-changes")
   const changesKey = Object.keys(backupData).find((key) => key.endsWith("-changes"));
 
   if (!changesKey) {
-    return { planId: null, changes: null };
+    return { planId: null, changes: null, completed: null };
   }
 
   // Extract plan ID from key
   const planId = changesKey.replace(/^plan-/, "").replace(/-changes$/, "");
 
   // Parse the changes JSON
+  let changes: PlanChanges | null = null;
   try {
     const changesJson = backupData[changesKey];
-    const changes = JSON.parse(changesJson) as PlanChanges;
-    return { planId, changes };
+    changes = JSON.parse(changesJson) as PlanChanges;
   } catch (error) {
     console.error("Failed to parse changes:", error);
-    return { planId, changes: null };
+  }
+
+  // Find and parse completed workouts
+  const completedKey = `plan-${planId}-completed`;
+  let completed: Record<string, boolean> | null = null;
+
+  if (backupData[completedKey]) {
+    try {
+      completed = JSON.parse(backupData[completedKey]) as Record<string, boolean>;
+    } catch (error) {
+      console.error("Failed to parse completed data:", error);
+    }
+  }
+
+  return { planId, changes, completed };
+}
+
+/**
+ * Apply completed status to workouts in the plan
+ */
+function applyCompletedStatus(plan: TrainingPlan, completed: Record<string, boolean>): void {
+  const completedCount = Object.keys(completed).filter((id) => completed[id]).length;
+  console.log(`Applying completed status to ${completedCount} workouts...`);
+
+  let appliedCount = 0;
+
+  plan.weeks?.forEach((week) => {
+    week.days?.forEach((day) => {
+      day.workouts?.forEach((workout) => {
+        if (completed[workout.id] !== undefined) {
+          workout.completed = completed[workout.id];
+          if (completed[workout.id]) {
+            appliedCount++;
+            console.log(`  - Marked ${workout.id} as completed`);
+          }
+        }
+      });
+    });
+  });
+
+  if (appliedCount > 0) {
+    console.log(`Applied completed status to ${appliedCount} workouts`);
   }
 }
 
@@ -833,15 +875,20 @@ export function modifyCommand(options: ModifyOptions): void {
     const backupContent = readFileSync(options.backup, "utf-8");
     const backupData: BackupData = JSON.parse(backupContent);
 
-    // 2. Extract changes from backup
-    const { planId, changes } = extractChangesFromBackup(backupData);
+    // 2. Extract changes and completed status from backup
+    const { planId, changes, completed } = extractDataFromBackup(backupData);
 
     if (!changes) {
       console.error("❌ No changes found in backup file");
       process.exit(1);
     }
 
-    console.log(`Found changes for plan: ${planId}\n`);
+    console.log(`Found data for plan: ${planId}`);
+    if (completed) {
+      const completedCount = Object.keys(completed).filter((id) => completed[id]).length;
+      console.log(`Found ${completedCount} completed workouts in backup`);
+    }
+    console.log();
 
     // 3. Read plan file
     console.log(`Reading plan: ${options.plan}`);
@@ -860,7 +907,13 @@ export function modifyCommand(options: ModifyOptions): void {
     console.log("Applying changes:\n");
     const modifiedPlan = applyChangesToPlan(plan, changes);
 
-    // 5. Write output
+    // 5. Apply completed status if available
+    if (completed) {
+      console.log();
+      applyCompletedStatus(modifiedPlan, completed);
+    }
+
+    // 6. Write output
     const outputPath = options.output || options.plan;
     console.log(`\nWriting modified plan to: ${outputPath}`);
     writeFileSync(outputPath, JSON.stringify(modifiedPlan, null, 2));
@@ -871,6 +924,10 @@ export function modifyCommand(options: ModifyOptions): void {
     console.log(`  - Edited: ${Object.keys(changes.edited).length} workouts`);
     console.log(`  - Moved: ${Object.keys(changes.moved).length} workouts`);
     console.log(`  - Added: ${Object.keys(changes.added).length} workouts`);
+    if (completed) {
+      const completedCount = Object.keys(completed).filter((id) => completed[id]).length;
+      console.log(`  - Completed: ${completedCount} workouts marked as done`);
+    }
   } catch (error) {
     console.error("❌ Error modifying plan:", error instanceof Error ? error.message : error);
     process.exit(1);
