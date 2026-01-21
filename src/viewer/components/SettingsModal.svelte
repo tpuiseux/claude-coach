@@ -85,6 +85,16 @@
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
+
+    importStatus = { message: "Backup downloaded!", isError: false };
+    setTimeout(() => (importStatus = null), 3000);
+  }
+
+  function handlePlanExportStatus(status: { message: string; isError: boolean } | null) {
+    importStatus = status;
+    if (status) {
+      setTimeout(() => (importStatus = null), 4000);
+    }
   }
 
   function handleImportClick() {
@@ -556,7 +566,7 @@
                 >Apply your changes and download the updated plan JSON file.</span
               >
             </div>
-            <UpdatePlanButton />
+            <UpdatePlanButton onStatus={handlePlanExportStatus} />
           </div>
 
           <div class="data-action">
