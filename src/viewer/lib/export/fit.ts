@@ -65,7 +65,7 @@ function getFitSubSport(sport: Sport): string {
     case "bike":
       return "road";
     case "run":
-      return "road";
+      return "generic";
     case "strength":
       return "strength_training";
     case "brick":
@@ -136,112 +136,174 @@ function getDurationType(unit: string): string {
 }
 
 /**
+ * Convert pace string (mm:ss per km) to speed in m/s * 1000 for FIT
+ */
+function paceToFitSpeed(pace: string): number {
+  const parts = pace.split(":");
+  const minutes = parseInt(parts[0], 10);
+  const seconds = parseInt(parts[1] || "0", 10);
+  const totalSeconds = minutes * 60 + seconds;
+  if (totalSeconds === 0) return 0;
+  // pace is min/km, speed is m/s, FIT stores speed * 1000
+  return Math.round((1000 / totalSeconds) * 1000);
+}
+
+/**
+ * Build a FIT workout step object with a consistent field set.
+ * All steps use the same fields to avoid @garmin/fitsdk Encoder
+ * message definition conflicts when alternating field layouts.
+ */
+function buildFitStep(
+  index: number,
+  opts: {
+    durationType: string;
+    durationValue: number;
+    targetType: string;
+    targetValue: number;
+    intensity: string;
+    customTargetValueLow?: number;
+    customTargetValueHigh?: number;
+  }
+): Record<string, unknown> {
+  return {
+    messageIndex: index,
+    durationType: opts.durationType,
+    durationValue: opts.durationValue,
+    targetType: opts.targetType,
+    targetValue: opts.targetValue,
+    intensity: opts.intensity,
+    customTargetValueLow: opts.customTargetValueLow ?? 0,
+    customTargetValueHigh: opts.customTargetValueHigh ?? 0,
+  };
+}
+
+/**
+ * Resolve target fields for a workout step based on its intensity
+ */
+function resolveTarget(
+  step: WorkoutStep,
+  settings: Settings
+): { targetType: string; targetValue: number; customLow: number; customHigh: number } {
+  if (!step.intensity) {
+    return { targetType: "open", targetValue: 0, customLow: 0, customHigh: 0 };
+  }
+
+  const intensityValue = step.intensity.value ?? 50;
+
+  switch (step.intensity.unit) {
+    case "percent_ftp":
+      return {
+        targetType: "power",
+        targetValue: 0,
+        customLow: step.intensity.valueLow ?? intensityValue - 5,
+        customHigh: step.intensity.valueHigh ?? intensityValue + 5,
+      };
+
+    case "percent_lthr":
+    case "hr_zone":
+      if (step.intensity.valueLow !== undefined && step.intensity.valueHigh !== undefined) {
+        return {
+          targetType: "heartRate",
+          targetValue: 0,
+          customLow: step.intensity.valueLow,
+          customHigh: step.intensity.valueHigh,
+        };
+      }
+      return {
+        targetType: "heartRate",
+        targetValue: intensityValue,
+        customLow: 0,
+        customHigh: 0,
+      };
+
+    case "pace_zone": {
+      const paceZones = settings.run?.paceZones;
+      if (paceZones && paceZones.length > 0) {
+        const zone = paceZones.find(
+          (z) => z.zone === step.intensity!.description || z.name === step.intensity!.description
+        );
+        if (zone) {
+          const speed = paceToFitSpeed(zone.pace);
+          // ±3% range around the target pace
+          return {
+            targetType: "speed",
+            targetValue: 0,
+            customLow: Math.round(speed * 0.97),
+            customHigh: Math.round(speed * 1.03),
+          };
+        }
+      }
+      return { targetType: "open", targetValue: 0, customLow: 0, customHigh: 0 };
+    }
+
+    case "rpe":
+      return { targetType: "open", targetValue: 0, customLow: 0, customHigh: 0 };
+
+    default:
+      return { targetType: "open", targetValue: 0, customLow: 0, customHigh: 0 };
+  }
+}
+
+/**
  * Generate workout steps from structured workout
  */
-function generateStepsFromStructure(structure: StructuredWorkout): {
-  steps: any[];
+function generateStepsFromStructure(
+  structure: StructuredWorkout,
+  settings: Settings
+): {
+  steps: Record<string, unknown>[];
   totalSteps: number;
 } {
-  const steps: any[] = [];
+  const steps: Record<string, unknown>[] = [];
   let stepIndex = 0;
 
-  // Helper to add a step
-  const addStep = (step: WorkoutStep, isPartOfRepeat = false) => {
-    const durationType = getDurationType(step.duration?.unit ?? "minutes");
-    const durationValue = getDurationValue(
-      step.duration?.value ?? 0,
-      step.duration?.unit ?? "minutes"
+  const addStep = (step: WorkoutStep) => {
+    const target = resolveTarget(step, settings);
+    steps.push(
+      buildFitStep(stepIndex, {
+        durationType: getDurationType(step.duration?.unit ?? "minutes"),
+        durationValue: getDurationValue(
+          step.duration?.value ?? 0,
+          step.duration?.unit ?? "minutes"
+        ),
+        targetType: target.targetType,
+        targetValue: target.targetValue,
+        intensity: getStepIntensity(step.type),
+        customTargetValueLow: target.customLow,
+        customTargetValueHigh: target.customHigh,
+      })
     );
-
-    const fitStep: any = {
-      messageIndex: stepIndex,
-      workoutStepName: step.name || "",
-      intensity: getStepIntensity(step.type),
-      durationType: durationType,
-      durationValue: durationValue,
-      notes: step.notes || "",
-    };
-
-    // Add target based on intensity unit
-    if (step.intensity) {
-      const intensityValue = step.intensity.value ?? 50;
-      switch (step.intensity.unit) {
-        case "percent_ftp":
-          fitStep.targetType = "power";
-          fitStep.targetValue = 0;
-          fitStep.customTargetValueLow = step.intensity.valueLow ?? intensityValue - 5;
-          fitStep.customTargetValueHigh = step.intensity.valueHigh ?? intensityValue + 5;
-          break;
-        case "percent_lthr":
-        case "hr_zone":
-          fitStep.targetType = "heart_rate";
-          fitStep.targetValue = 0;
-          // HR zone values need to be actual BPM if available
-          if (step.intensity.valueLow !== undefined && step.intensity.valueHigh !== undefined) {
-            fitStep.customTargetValueLow = step.intensity.valueLow;
-            fitStep.customTargetValueHigh = step.intensity.valueHigh;
-          } else {
-            // Use zone as target value (1-5)
-            fitStep.targetValue = intensityValue;
-          }
-          break;
-        case "rpe":
-          // No direct RPE support in FIT, use open target
-          fitStep.targetType = "open";
-          break;
-        default:
-          fitStep.targetType = "open";
-      }
-    } else {
-      fitStep.targetType = "open";
-    }
-
-    // Add cadence target if present
-    if (step.cadence) {
-      fitStep.customTargetCadenceLow = step.cadence.low ?? 80;
-      fitStep.customTargetCadenceHigh = step.cadence.high ?? 100;
-    }
-
-    steps.push(fitStep);
     stepIndex++;
-    return stepIndex - 1;
   };
 
-  // Helper to add interval set
   const addIntervalSet = (intervalSet: IntervalSet) => {
-    // For FIT, we need to add a repeat step that references the child steps
-    const repeatStepIndex = stepIndex;
-    stepIndex++; // Reserve index for repeat step
-
-    // Add the child steps
-    const childStepIndices: number[] = [];
+    // Add child steps FIRST
+    const firstChildIndex = stepIndex;
     for (const childStep of intervalSet.steps) {
-      childStepIndices.push(addStep(childStep, true));
+      addStep(childStep);
     }
 
-    // Create the repeat step
-    const repeatStep: any = {
-      messageIndex: repeatStepIndex,
-      workoutStepName: intervalSet.name || "Intervals",
-      durationType: "repeat_until_steps_cmplt",
-      durationValue: intervalSet.repeats,
-      targetType: "open",
-      intensity: "interval",
-    };
-
-    // Insert repeat step at correct position
-    steps.splice(repeatStepIndex, 0, repeatStep);
-    stepIndex++; // Adjust for inserted repeat step
+    // Add repeat step AFTER children (Garmin convention)
+    // durationValue = index of first child step to repeat from
+    // targetValue = number of repetitions
+    steps.push(
+      buildFitStep(stepIndex, {
+        durationType: "repeatUntilStepsCmplt",
+        durationValue: firstChildIndex,
+        targetType: "open",
+        targetValue: intervalSet.repeats,
+        intensity: "rest",
+      })
+    );
+    stepIndex++;
   };
 
-  // Process warmup
   if (structure.warmup) {
     for (const step of structure.warmup) {
       addStep(step);
     }
   }
 
-  // Process main set
   for (const item of structure.main) {
     if ("repeats" in item) {
       addIntervalSet(item as IntervalSet);
@@ -250,7 +312,6 @@ function generateStepsFromStructure(structure: StructuredWorkout): {
     }
   }
 
-  // Process cooldown
   if (structure.cooldown) {
     for (const step of structure.cooldown) {
       addStep(step);
@@ -263,22 +324,13 @@ function generateStepsFromStructure(structure: StructuredWorkout): {
 /**
  * Generate simple workout steps when no structure is provided
  */
-function generateSimpleSteps(workout: Workout): { steps: any[]; totalSteps: number } {
-  const steps: any[] = [];
+function generateSimpleSteps(workout: Workout): {
+  steps: Record<string, unknown>[];
+  totalSteps: number;
+} {
   const totalMinutes = workout.durationMinutes || 60;
 
-  // Warmup (10% of total, 5-15 min)
   const warmupMinutes = Math.min(15, Math.max(5, Math.round(totalMinutes * 0.1)));
-  steps.push({
-    messageIndex: 0,
-    workoutStepName: "Warm Up",
-    intensity: "warmup",
-    durationType: "time",
-    durationValue: warmupMinutes * 60 * 1000,
-    targetType: "open",
-  });
-
-  // Main (80% of total)
   const cooldownMinutes = Math.min(10, Math.max(5, Math.round(totalMinutes * 0.1)));
   const mainMinutes = totalMinutes - warmupMinutes - cooldownMinutes;
 
@@ -287,25 +339,29 @@ function generateSimpleSteps(workout: Workout): { steps: any[]; totalSteps: numb
   else if (workout.type === "rest") mainIntensity = "rest";
   else if (workout.type === "intervals" || workout.type === "vo2max") mainIntensity = "interval";
 
-  steps.push({
-    messageIndex: 1,
-    workoutStepName: "Main Set",
-    intensity: mainIntensity,
-    durationType: "time",
-    durationValue: mainMinutes * 60 * 1000,
-    targetType: "open",
-    notes: workout.description || "",
-  });
-
-  // Cooldown (10% of total, 5-10 min)
-  steps.push({
-    messageIndex: 2,
-    workoutStepName: "Cool Down",
-    intensity: "cooldown",
-    durationType: "time",
-    durationValue: cooldownMinutes * 60 * 1000,
-    targetType: "open",
-  });
+  const steps = [
+    buildFitStep(0, {
+      durationType: "time",
+      durationValue: warmupMinutes * 60 * 1000,
+      targetType: "open",
+      targetValue: 0,
+      intensity: "warmup",
+    }),
+    buildFitStep(1, {
+      durationType: "time",
+      durationValue: mainMinutes * 60 * 1000,
+      targetType: "open",
+      targetValue: 0,
+      intensity: mainIntensity,
+    }),
+    buildFitStep(2, {
+      durationType: "time",
+      durationValue: cooldownMinutes * 60 * 1000,
+      targetType: "open",
+      targetValue: 0,
+      intensity: "cooldown",
+    }),
+  ];
 
   return { steps, totalSteps: 3 };
 }
@@ -313,7 +369,7 @@ function generateSimpleSteps(workout: Workout): { steps: any[]; totalSteps: numb
 /**
  * Generate a complete FIT workout file
  */
-export async function generateFit(workout: Workout, _settings: Settings): Promise<Uint8Array> {
+export async function generateFit(workout: Workout, settings: Settings): Promise<Uint8Array> {
   if (!isFitSupported(workout.sport)) {
     throw new Error(`FIT export not supported for ${workout.sport} workouts`);
   }
@@ -323,20 +379,29 @@ export async function generateFit(workout: Workout, _settings: Settings): Promis
   // File ID message (required)
   encoder.onMesg(Profile.MesgNum.FILE_ID, {
     type: "workout",
-    manufacturer: "development",
-    product: 1,
+    manufacturer: "garmin",
+    garminProduct: "connect",
+    product: 65534,
     serialNumber: Math.floor(Math.random() * 1000000),
     timeCreated: new Date(),
   });
 
+  // File Creator message
+  encoder.onMesg(Profile.MesgNum.FILE_CREATOR, {
+    softwareVersion: 1,
+    hardwareVersion: 0,
+  });
+
   // Generate steps
   const { steps, totalSteps } = workout.structure
-    ? generateStepsFromStructure(workout.structure)
+    ? generateStepsFromStructure(workout.structure, settings)
     : generateSimpleSteps(workout);
 
   // Workout message
   encoder.onMesg(Profile.MesgNum.WORKOUT, {
-    workoutName: workout.name,
+    capabilities: "tcx",
+    wktName: workout.name,
+    wktDescription: workout.name,
     sport: getFitSport(workout.sport),
     subSport: getFitSubSport(workout.sport),
     numValidSteps: totalSteps,
