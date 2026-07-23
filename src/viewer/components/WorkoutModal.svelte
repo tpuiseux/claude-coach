@@ -11,6 +11,7 @@
     isErgSupported,
     type ExportFormat,
   } from "../lib/export/index.js";
+  import { pushWorkoutToGarmin, isGarminConnectSupported } from "../lib/garminBridge.js";
 
   type Mode = "view" | "edit" | "create";
 
@@ -45,6 +46,8 @@
   let showDeleteConfirm = $state(false);
   let showExportMenu = $state(false);
   let exportStatus = $state<{ message: string; isError: boolean } | null>(null);
+  let garminStatus = $state<{ message: string; isError: boolean } | null>(null);
+  let garminSending = $state(false);
 
   // Editable fields - intentionally capture initial values only
   let editSport = $state<Sport>(untrack(() => workout?.sport || "run"));
@@ -155,9 +158,24 @@
     }, 3000);
   }
 
+  async function handlePushToGarmin() {
+    if (!workout || garminSending) return;
+    garminSending = true;
+    garminStatus = { message: "Envoi vers Garmin Connect...", isError: false };
+
+    const result = await pushWorkoutToGarmin(workout, day.date);
+    garminStatus = { message: result.message, isError: !result.ok };
+    garminSending = false;
+
+    setTimeout(() => {
+      garminStatus = null;
+    }, 5000);
+  }
+
   // Check available export formats for current workout
   const availableFormats = $derived(workout ? getAvailableFormats(workout.sport) : []);
   const canExport = $derived(availableFormats.length > 0);
+  const canPushToGarmin = $derived(workout ? isGarminConnectSupported(workout.sport) : false);
 
   // Derive displayed workout (for view mode)
   const displayWorkout = $derived(
@@ -413,11 +431,29 @@
               {/if}
             </div>
           {/if}
+          {#if canPushToGarmin}
+            <button
+              class="icon-btn garmin"
+              onclick={handlePushToGarmin}
+              disabled={garminSending}
+              title="Envoyer sur Garmin Connect"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="22" y1="2" x2="11" y2="13" />
+                <polygon points="22 2 15 22 11 13 2 9 22 2" />
+              </svg>
+            </button>
+          {/if}
         </div>
         <div class="footer-right">
           {#if exportStatus}
             <div class="export-status" class:error={exportStatus.isError}>
               {exportStatus.message}
+            </div>
+          {/if}
+          {#if garminStatus}
+            <div class="export-status" class:error={garminStatus.isError}>
+              {garminStatus.message}
             </div>
           {/if}
           <button
@@ -745,6 +781,17 @@
     background: var(--bg-elevated);
     border-color: var(--border-medium);
     color: var(--text-primary);
+  }
+
+  .icon-btn.garmin:hover {
+    background: rgba(0, 124, 195, 0.1);
+    border-color: #007cc3;
+    color: #007cc3;
+  }
+
+  .icon-btn.garmin:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
   }
 
   .complete-btn {
