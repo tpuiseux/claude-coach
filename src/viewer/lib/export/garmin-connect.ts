@@ -123,6 +123,17 @@ function resolveTarget(step: WorkoutStep): {
   targetValueTwo?: number;
 } {
   if (step.intensity?.unit === "pace_zone") {
+    // Prefer explicit valueLow/valueHigh (seconds/km; valueLow = faster/smaller,
+    // valueHigh = slower/larger) when the plan sets them directly on the step —
+    // more precise than a named-zone lookup, and works for blended/custom paces
+    // that don't line up with a single named zone.
+    if (step.intensity.valueLow !== undefined && step.intensity.valueHigh !== undefined) {
+      return {
+        targetType: GARMIN_TARGET_PACE_ZONE,
+        targetValueOne: 1000 / step.intensity.valueHigh, // slower bound -> lower speed
+        targetValueTwo: 1000 / step.intensity.valueLow, // faster bound -> higher speed
+      };
+    }
     const range = findPlanPaceZoneSpeedRange(step.intensity.description);
     if (range) {
       return {
