@@ -10,6 +10,8 @@
   } from "../stores/settings.js";
   import { version } from "../../../package.json";
   import UpdatePlanButton from "./UpdatePlanButton.svelte";
+  import { loadGarminBridgeConfig, saveGarminBridgeConfig } from "../stores/garminBridge.js";
+  import { checkGarminBridgeHealth } from "../lib/garminBridge.js";
 
   interface Props {
     settings: Settings;
@@ -23,6 +25,23 @@
   let activeTab = $state("general");
   // Use untrack to explicitly capture initial value (intentional local copy)
   let localSettings = $state(untrack(() => JSON.parse(JSON.stringify(settings))));
+
+  let garminConfig = $state(untrack(() => loadGarminBridgeConfig()));
+  let garminTestStatus = $state<{ message: string; isError: boolean } | null>(null);
+  let garminTesting = $state(false);
+
+  function saveGarminConfig() {
+    saveGarminBridgeConfig(garminConfig);
+  }
+
+  async function testGarminBridge() {
+    if (garminTesting) return;
+    garminTesting = true;
+    garminTestStatus = null;
+    const result = await checkGarminBridgeHealth();
+    garminTestStatus = { message: result.message, isError: !result.ok };
+    garminTesting = false;
+  }
 
   function handleKeydown(e: KeyboardEvent) {
     if (e.key === "Escape") onClose();
@@ -164,7 +183,7 @@
       </div>
 
       <div class="settings-tabs">
-        {#each [["general", "General"], ["run", "Run"], ["bike", "Bike"], ["swim", "Swim"], ["data", "Data"], ["about", "About"]] as [id, label]}
+        {#each [["general", "General"], ["run", "Run"], ["bike", "Bike"], ["swim", "Swim"], ["garmin", "Garmin"], ["data", "Data"], ["about", "About"]] as [id, label]}
           <button
             class="settings-tab"
             class:active={activeTab === id}
@@ -498,6 +517,60 @@
               </p>
             </div>
           </details>
+        </div>
+      {/if}
+
+      <!-- Garmin Tab -->
+      {#if activeTab === "garmin"}
+        <div class="settings-section">
+          <h4 class="settings-section-title">Garmin Connect Bridge</h4>
+          <div class="data-explainer">
+            <p>
+              This static page can't hold your Garmin credentials or talk to Garmin Connect
+              directly. The "Send to Garmin" button on a workout calls a small bridge server instead
+              — either running on your own machine, or one you've deployed yourself.
+            </p>
+            <p>
+              The URL and token below are kept only in this browser's local storage — never in the
+              page itself.
+            </p>
+          </div>
+          <div class="settings-row">
+            <span class="settings-label">Bridge URL</span>
+            <input
+              type="text"
+              class="threshold-input"
+              style="flex: 1"
+              bind:value={garminConfig.url}
+              onchange={saveGarminConfig}
+              placeholder="http://127.0.0.1:8420 or https://your-site.example/garmin-bridge"
+            />
+          </div>
+          <div class="settings-row">
+            <span class="settings-label">Token</span>
+            <input
+              type="password"
+              class="threshold-input"
+              style="flex: 1"
+              bind:value={garminConfig.token}
+              onchange={saveGarminConfig}
+              placeholder="Only needed for a remotely-deployed bridge"
+            />
+          </div>
+          <div class="data-action">
+            <div class="data-action-info">
+              <span class="data-action-title">Test Connection</span>
+              <span class="data-action-desc">Checks that the bridge is reachable at this URL.</span>
+            </div>
+            <button class="data-btn help" onclick={testGarminBridge} disabled={garminTesting}>
+              {garminTesting ? "Testing..." : "Test"}
+            </button>
+          </div>
+          {#if garminTestStatus}
+            <div class="import-status" class:error={garminTestStatus.isError}>
+              {garminTestStatus.message}
+            </div>
+          {/if}
         </div>
       {/if}
 
