@@ -80,7 +80,12 @@
         tabindex="0"
       >
         <div class="day-header">
-          <span class="day-name">{day.dayOfWeek.slice(0, 3)}</span>
+          <span class="day-name-group">
+            <span class="day-name">{day.dayOfWeek.slice(0, 3)}</span>
+            {#if isToday}
+              <span class="today-badge">Today</span>
+            {/if}
+          </span>
           <span class="day-date">{parseDate(day.date).getDate()}</span>
         </div>
 
@@ -212,10 +217,35 @@
 
   .day-column.today {
     background: var(--bg-tertiary);
+    outline: 2px solid var(--accent);
+    outline-offset: -2px;
+    box-shadow: 0 0 0 4px var(--accent-glow);
   }
 
   .day-column.today .day-name {
     color: var(--accent);
+  }
+
+  .day-column.today .day-date {
+    color: var(--accent);
+    font-weight: 700;
+  }
+
+  .day-name-group {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+
+  .today-badge {
+    font-size: 0.6rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--bg-primary);
+    background: var(--accent);
+    padding: 0.1rem 0.35rem;
+    border-radius: 4px;
   }
 
   .day-column.drag-over {
