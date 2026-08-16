@@ -71,6 +71,7 @@
 
       <div
         class="day-column"
+        id={isToday ? "today-column" : undefined}
         class:today={isToday}
         class:drag-over={isDragOver}
         ondragover={(e) => handleDragOver(e, day.date)}

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onMount } from "svelte";
   import "./styles.css";
   import Sidebar from "./components/Sidebar.svelte";
   import WeeksContainer from "./components/WeeksContainer.svelte";
@@ -61,6 +62,18 @@
         });
       });
     });
+  });
+
+  // Jump to today's date on load, if it falls within the plan. Small delay
+  // lets the week card's entrance fade-in (staggered per week, see
+  // WeekCard.svelte's animationDelay) get a head start so we don't land on
+  // a still-invisible card.
+  onMount(() => {
+    setTimeout(() => {
+      document
+        .getElementById("today-column")
+        ?.scrollIntoView({ behavior: "instant", block: "center" });
+    }, 150);
   });
 
   function handleSettingsChange(newSettings: Settings) {
