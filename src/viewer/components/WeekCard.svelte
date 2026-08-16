@@ -218,9 +218,6 @@
 
   .day-column.today {
     background: var(--bg-tertiary);
-    outline: 2px solid var(--accent);
-    outline-offset: -2px;
-    box-shadow: 0 0 0 4px var(--accent-glow);
   }
 
   .day-column.today .day-name {
