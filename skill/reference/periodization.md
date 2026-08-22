@@ -159,6 +159,42 @@ Never increase the long session by more than 2-3km (running) or 15-20km (cycling
 - Bike: 2-3x per week, 150-200km total, one ride of 80-100km
 - Run: 3x per week, 35-50km total, one run of 18-22km
 
+### 5K
+
+**Minimum training time**: 3-6 hours/week at peak
+**Minimum build time**: 8-10 weeks from solid base (see `road-race-periodization.md` for phase breakdown)
+
+**Weekly structure at peak**:
+
+- Run: 4-5x per week, 25-40km total
+- One long run of 10-12km (matches `workouts.md` long-run target)
+- 1-2 quality sessions (VO2max intervals, short threshold)
+- Remaining runs easy
+
+### 10K
+
+**Minimum training time**: 4-7 hours/week at peak
+**Minimum build time**: 8-12 weeks from solid base (8 weeks is a workable short build if an aerobic base already exists)
+
+**Weekly structure at peak**:
+
+- Run: 4-6x per week, 30-50km total
+- One long run of 14-16km (matches `workouts.md` long-run target)
+- 1-2 quality sessions (threshold/cruise intervals, race-pace reps)
+- Remaining runs easy
+
+### Half Marathon
+
+**Minimum training time**: 5-9 hours/week at peak
+**Minimum build time**: 12-16 weeks from solid base
+
+**Weekly structure at peak**:
+
+- Run: 4-6x per week, 40-65km total
+- One long run of 18-22km (matches `workouts.md` long-run target), including HM-pace segments
+- 1-2 quality sessions (threshold, HM-pace)
+- Remaining runs easy
+
 ### Marathon
 
 **Minimum training time**: 6-10 hours/week at peak
@@ -189,7 +225,7 @@ Never increase the long session by more than 2-3km (running) or 15-20km (cycling
 
 Zone 2 is the foundation—never sacrifice it for more intensity.
 
-### Why Threshold Training Works (Zone 4)
+### Why Threshold Training Works (Zone 5a)
 
 | Adaptation                | Timeline  | Mechanism                                           |
 | ------------------------- | --------- | --------------------------------------------------- |

@@ -14,7 +14,7 @@ See example training plans at [felixrieseberg.github.io/claude-coach](https://fe
 
 To use this tool, you need access to Claude.ai or Claude Code with network access for Skills. Depending on user/admin settings, Skills may have full, partial, or no network access.
 
-Syncing all your Strava activities and creating a tailored training plan takes ca. 15 minutes.
+Syncing your Garmin activity history and creating a tailored training plan takes ca. 15 minutes. Garmin sync needs Python 3 installed locally (a one-time `pip install`, see Option 1 below) - everything else only needs Node.js, via `npx`.
 
 ### Installing the Skill
 
@@ -37,28 +37,25 @@ Use the most capable model available to you (as I'm writing this, that's Opus 4.
 
 > Help me create a training plan for the Ironman 70.3 Oceanside on March 29th 2026 using the "coach" skill.
 
-Claude will ask how you'd like to provide your fitness data. You have two options: You can either tell Claude about your fitness history manually - or you can give it access to your Strava activities. I recommend the later - data doesn't lie and more data allows Claude to make a training plan that really fits you.
+Claude will ask how you'd like to provide your fitness data. You have two options: You can either tell Claude about your fitness history manually - or you can give it access to your Garmin Connect activity history. I recommend the later - data doesn't lie and more data allows Claude to make a training plan that really fits you.
 
-#### Option 1: Connect to Strava (Recommended)
+#### Option 1: Connect to Garmin Connect (Recommended)
 
-The easiest way to get a personalized plan is to let Claude analyze your Strava training history. This gives Claude real data about your current fitness, training patterns, and progress.
+The easiest way to get a personalized plan is to let Claude analyze your Garmin training history. This gives Claude real data about your current fitness, training patterns, and progress.
 
-Claude needs a `Client ID` and `Client Secret` to access your Strava activities. You're only giving Claude access to your data - nobody else gets to see it.
+The first time, Claude needs a small local Python environment to talk to Garmin Connect on your behalf (Garmin has no public API, so this uses the same login flow the [Garmin Connect app](https://connect.garmin.com/) itself uses, MFA included):
 
-1. Go to [strava.com/settings/api](https://www.strava.com/settings/api) and log in with your Strava account
-2. You'll see a form titled "My API Application" - fill it out:
-   - **Application Name**: Enter anything you like (e.g., "Claude Coach")
-   - **Category**: Select "Data Importer"
-   - **Club**: Leave this blank
-   - **Website**: Enter any URL (e.g., `https://claude.ai`)
-   - **Application Description**: Enter anything (e.g., "Training plan generation")
-   - **Authorization Callback Domain**: Enter `localhost`
-3. Check the box to agree to Strava's API Agreement and click **Create**
-4. Copy your **Client ID** and **Client Secret** and give them to Claude when prompted
+```bash
+cd garmin-bridge && python3 -m venv venv && ./venv/bin/pip install -r requirements.txt
+```
+
+From then on, Claude runs `garmin-bridge/sync_activities.py` itself - you'll be prompted for your Garmin email, password, and MFA code (if enabled) once; a session token gets cached locally so you won't be asked again on later syncs. Your password is never stored.
+
+If you'd rather use Strava instead (still supported, just no longer the default the skill offers), ask Claude to use `npx claude-coach auth`/`sync` and it'll walk you through registering a Strava API app at [strava.com/settings/api](https://www.strava.com/settings/api).
 
 #### Option 2: Manual Entry
 
-Don't use Strava, or prefer not to connect it? No problem. You can tell Claude about your fitness directly. Be prepared to share:
+Don't want to connect Garmin (or Strava)? No problem. You can tell Claude about your fitness directly. Be prepared to share:
 
 **Current Training (recent 4-8 weeks):**
 

@@ -18,7 +18,7 @@
     "build": "npm run build:ts && npm run build:viewer && npm run build:skill",
     "build:ts": "tsc -p tsconfig.cli.json",
     "build:viewer": "vite build --config vite.config.viewer.ts",
-    "build:skill": "mkdir -p dist && cd skill && zip -r ../dist/coach-skill.zip . -x '*.DS_Store' && echo 'Skill packaged to dist/coach-skill.zip'",
+    "build:skill": "mkdir -p dist skill/garmin-bridge && cp garmin-bridge/garmin_lib.py garmin-bridge/sync_activities.py garmin-bridge/requirements.txt skill/garmin-bridge/ && cd skill && zip -r ../dist/coach-skill.zip . -x '*.DS_Store' && cd .. && rm -rf skill/garmin-bridge && echo 'Skill packaged to dist/coach-skill.zip'",
     "build:website": "node scripts/build-website.js",
     "dev": "tsx watch src/cli.ts",
     "dev:viewer": "vite --config vite.config.viewer.ts",

@@ -104,6 +104,29 @@ For athletes with known race times:
 
 ---
 
+## Reconciling the Zone Systems
+
+This skill describes running intensity three overlapping ways: the Friel HR zones above, the
+Daniels/VDOT pace zones above, and the letter-coded pace zones in `road-race-periodization.md`
+(E, LR, S, T, I, R, RP). They describe the same physiology — use this table to translate between
+them rather than mixing labels from different systems within one plan:
+
+| Friel HR Zone          | Daniels/VDOT   | Road-race letters (`road-race-periodization.md`) | Feel                               |
+| ---------------------- | -------------- | ------------------------------------------------ | ---------------------------------- |
+| Zone 1 - Recovery      | (below E)      | (easiest end of E)                               | Very easy, could talk indefinitely |
+| Zone 2 - Aerobic       | E - Easy       | E - Easy/Recovery, LR - Long Run                 | Easy, full conversations           |
+| Zone 3 - Tempo         | M - Marathon   | S - Steady/Aerobic Endurance                     | Moderate, controlled               |
+| Zone 4 - Sub-threshold | T (low end)    | T - Threshold/Tempo (low end)                    | Hard, few words at a time          |
+| Zone 5a - Threshold    | T (top end)    | T - Threshold/Tempo (top end)                    | Very hard, ~60min race effort      |
+| Zone 5b - VO2max       | I - Interval   | I - VO2max/Interval                              | Extremely hard, 3-8min max         |
+| Zone 5c - Anaerobic    | R - Repetition | R - Repetition/Speed                             | Max effort, < 3min                 |
+
+`RP` (Race Pace, road-race letters) isn't a fixed row — it maps to whichever zone matches the
+race's duration: roughly Zone 5b for 5K, Zone 5a for 10K, Zone 3-4 for half marathon, Zone 3 for
+marathon.
+
+---
+
 ## Power-Based Training (Cycling)
 
 When power data is available, use power zones exclusively—they're more accurate than HR which lags and drifts.

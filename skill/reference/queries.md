@@ -19,7 +19,7 @@ SELECT
   ROUND(SUM(moving_time) / 3600.0, 1) AS hours,
   ROUND(SUM(distance) / 1000.0, 1) AS km
 FROM activities
-WHERE start_date >= date('now', '-8 weeks')
+WHERE start_date >= date('now', '-56 days')
 GROUP BY week, sport_type
 ORDER BY week DESC, sport_type;
 
@@ -28,7 +28,7 @@ SELECT sport_type,
   ROUND(MAX(moving_time) / 3600.0, 1) AS longest_hours,
   ROUND(MAX(distance) / 1000.0, 1) AS longest_km
 FROM activities
-WHERE start_date >= date('now', '-12 weeks')
+WHERE start_date >= date('now', '-84 days')
 GROUP BY sport_type;
 
 -- Average session duration
@@ -37,7 +37,7 @@ SELECT sport_type,
   ROUND(AVG(distance) / 1000.0, 1) AS avg_km,
   COUNT(*) AS total_sessions
 FROM activities
-WHERE start_date >= date('now', '-8 weeks')
+WHERE start_date >= date('now', '-56 days')
 GROUP BY sport_type;
 
 -- Weekly training load trend
@@ -46,7 +46,7 @@ SELECT
   SUM(suffer_score) AS weekly_load,
   ROUND(SUM(moving_time) / 3600.0, 1) AS total_hours
 FROM activities
-WHERE start_date >= date('now', '-12 weeks')
+WHERE start_date >= date('now', '-84 days')
 GROUP BY week
 ORDER BY week;
 ```
@@ -175,7 +175,7 @@ SELECT
   END AS day_name,
   COUNT(*) AS long_runs
 FROM activities
-WHERE sport_type IN ('Run', 'Trail Run')
+WHERE sport_type IN ('Run', 'TrailRun')
   AND moving_time > 3600
 GROUP BY strftime('%w', start_date)
 ORDER BY long_runs DESC;
@@ -209,7 +209,7 @@ SELECT
   COUNT(*) AS sessions
 FROM activities
 WHERE average_heartrate IS NOT NULL
-  AND start_date >= date('now', '-8 weeks')
+  AND start_date >= date('now', '-56 days')
 GROUP BY sport_type;
 
 -- HR distribution for zone estimation
@@ -221,6 +221,6 @@ SELECT
   ROUND(MAX(max_heartrate), 0) AS highest_max_hr
 FROM activities
 WHERE average_heartrate IS NOT NULL
-  AND start_date >= date('now', '-12 weeks')
+  AND start_date >= date('now', '-84 days')
 GROUP BY sport_type;
 ```

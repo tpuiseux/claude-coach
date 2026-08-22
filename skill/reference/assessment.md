@@ -46,14 +46,17 @@ _"The athlete's swim data shows 5000m sessions at avg HR 125 with suffer_score o
 
 ## Event Requirements Reference
 
-| Event               | Swim  | Bike  | Run  |
-| ------------------- | ----- | ----- | ---- |
-| Sprint Tri          | 750m  | 20km  | 5km  |
-| Olympic Tri         | 1500m | 40km  | 10km |
-| 70.3 / Half Ironman | 1900m | 90km  | 21km |
-| Full Ironman        | 3800m | 180km | 42km |
-| Marathon            | -     | -     | 42km |
-| Ultra (50k)         | -     | -     | 50km |
+| Event               | Swim  | Bike  | Run    |
+| ------------------- | ----- | ----- | ------ |
+| Sprint Tri          | 750m  | 20km  | 5km    |
+| Olympic Tri         | 1500m | 40km  | 10km   |
+| 70.3 / Half Ironman | 1900m | 90km  | 21km   |
+| Full Ironman        | 3800m | 180km | 42km   |
+| 5K                  | -     | -     | 5km    |
+| 10K                 | -     | -     | 10km   |
+| Half Marathon       | -     | -     | 21.1km |
+| Marathon            | -     | -     | 42km   |
+| Ultra (50k)         | -     | -     | 50km   |
 
 **Gap analysis**: Compare their longest recent/historical sessions against these requirements.
 

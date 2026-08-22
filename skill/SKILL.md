@@ -1,6 +1,6 @@
 ---
 name: coach
-description: Create personalized triathlon, marathon, and ultra-endurance training plans. Use when athletes ask for training plans, workout schedules, race preparation, or coaching advice. Can sync with Strava to analyze training history, or work from manually provided fitness data. Generates periodized plans with sport-specific workouts, zones, and race-day strategies.
+description: Create personalized training plans for running (5K, 10K, half marathon, marathon, trail races), triathlon, and ultra-endurance events. Use when athletes ask for training plans, workout schedules, race preparation, pace/interval calculations, or coaching advice. Can sync with Garmin Connect to analyze training history, or work from manually provided fitness data. Generates periodized plans with sport-specific workouts, zones, and race-day strategies.
 ---
 
 # Claude Coach: Endurance Training Plan Skill
@@ -11,9 +11,9 @@ You are an expert endurance coach specializing in triathlon, marathon, and ultra
 
 Before creating a training plan, you need to understand the athlete's current fitness. There are two ways to gather this information:
 
-### Step 1: Check for Existing Strava Data
+### Step 1: Check for Existing Synced Data
 
-First, check if the user has already synced their Strava data:
+First, check if the user has already synced their training history:
 
 ```bash
 ls ~/.claude-coach/coach.db
@@ -30,17 +30,17 @@ questions:
   - question: "How would you like to provide your training data?"
     header: "Data Source"
     options:
-      - label: "Connect to Strava (Recommended)"
-        description: "Copy tokens from strava.com/settings/api - I'll analyze your training history"
+      - label: "Connect to Garmin Connect (Recommended)"
+        description: "Log in with your Garmin account - I'll analyze your training history"
       - label: "Enter manually"
-        description: "Tell me about your fitness - no Strava account needed"
+        description: "Tell me about your fitness - no Garmin account needed"
 ```
 
 ---
 
-## Option A: Strava Integration
+## Option A: Garmin Connect Integration
 
-If they choose Strava, first check if database already exists:
+If they choose Garmin, first check if database already exists:
 
 ```bash
 ls ~/.claude-coach/coach.db
@@ -48,93 +48,49 @@ ls ~/.claude-coach/coach.db
 
 **If the database exists:** Skip to "Database Access" to query their training history.
 
-**If no database exists:** Guide the user through Strava authorization.
-
-### Step 1: Get Strava API Credentials
-
-Use **AskUserQuestion** to get credentials:
-
-```
-questions:
-  - question: "Go to strava.com/settings/api - what is your Client ID?"
-    header: "Client ID"
-    options:
-      - label: "I have my Client ID"
-        description: "Enter the numeric Client ID via 'Other'"
-      - label: "I need to create an app first"
-        description: "Click 'Create an app', set callback domain to 'localhost'"
-```
-
-Then ask for the secret:
-
-```
-questions:
-  - question: "Now enter your Client Secret from the same page"
-    header: "Client Secret"
-    options:
-      - label: "I have my Client Secret"
-        description: "Enter the secret via 'Other'"
-```
-
-### Step 2: Generate Authorization URL
-
-Run the auth command to generate the OAuth URL:
+**If no database exists:** Create it, then run the Garmin sync.
 
 ```bash
-npx claude-coach auth --client-id=CLIENT_ID --client-secret=CLIENT_SECRET
+npx claude-coach init
 ```
 
-This outputs an authorization URL. **Show this URL to the user** and tell them:
-
-1. Open the URL in a browser
-2. Click "Authorize" on Strava
-3. You'll be redirected to a page that won't load (that's expected!)
-4. Copy the **entire URL** from the browser's address bar and paste it back here
-
-### Step 3: Get the Redirect URL
-
-Use **AskUserQuestion** to get the URL:
-
-```
-questions:
-  - question: "Paste the entire URL from your browser's address bar"
-    header: "Redirect URL"
-    options:
-      - label: "I have the URL"
-        description: "Paste the full URL (starts with http://localhost...) via 'Other'"
-```
-
-### Step 4: Exchange Code and Sync
-
-Run these commands to complete authentication and sync (the CLI extracts the code from the URL automatically):
+**First time only** - the Garmin sync script needs a Python environment with the `garminconnect`
+library. Set it up once:
 
 ```bash
-npx claude-coach auth --code="FULL_REDIRECT_URL"
-npx claude-coach sync --days=730
+cd garmin-bridge && python3 -m venv venv && ./venv/bin/pip install -r requirements.txt
+```
+
+### Run the Garmin Activity Sync
+
+```bash
+cd garmin-bridge && ./venv/bin/python3 sync_activities.py --days=730
 ```
 
 This will:
 
-1. Exchange the code for access tokens
-2. Fetch 2 years of activity history
-3. Store everything in `~/.claude-coach/coach.db`
+1. Log in to Garmin Connect (first run prompts for email/password/MFA code, then caches a
+   session token at `~/.garminconnect` - later runs reuse it automatically, no re-prompt)
+2. Fetch ~2 years of activity history from Garmin Connect
+3. Write it into the same `activities` table Strava used to populate, mapped onto the same
+   Strava-style `sport_type` values (Run, Ride, GravelRide, etc.) so every query and view below
+   works unchanged
 
-### SQLite Requirements
-
-The sync command stores data in a SQLite database. The tool automatically uses the best available option:
-
-1. **Node.js 22.5+**: Uses the built-in `node:sqlite` module (no extra installation needed)
-2. **Older Node versions**: Falls back to the `sqlite3` CLI tool
+Note: `suffer_score` is left NULL for Garmin-sourced rows - Garmin doesn't expose an equivalent
+to Strava's proprietary Relative Effort on the same scale. Garmin's own load/effort metrics
+(`activityTrainingLoad`, `aerobicTrainingEffect`) are preserved in each row's `raw_json` instead
+of being force-mapped into that column.
 
 ### Refreshing Data
 
 To get latest activities before creating a new plan:
 
 ```bash
-npx claude-coach sync
+cd garmin-bridge && ./venv/bin/python3 sync_activities.py --days=14
 ```
 
-This uses cached tokens and only fetches new activities.
+This reuses the cached Garmin token and upserts by activity ID, so re-running with an overlapping
+date range is safe (it updates existing rows rather than duplicating them).
 
 ---
 
@@ -171,7 +127,7 @@ If they choose manual entry, gather the following through conversation. Ask natu
 
 ### Creating a Manual Assessment
 
-When working from manual data, create an assessment object with the same structure as you would from Strava data:
+When working from manual data, create an assessment object with the same structure as you would from synced Garmin data:
 
 ```json
 {
@@ -225,15 +181,29 @@ This works on any Node.js version (uses built-in SQLite on Node 22.5+, falls bac
 
 Read these files as needed during plan creation:
 
-| File                                 | When to Read                | Contents                                     |
-| ------------------------------------ | --------------------------- | -------------------------------------------- |
-| `skill/reference/queries.md`         | First step of assessment    | SQL queries for athlete analysis             |
-| `skill/reference/assessment.md`      | After running queries       | How to interpret data, validate with athlete |
-| `skill/reference/zones.md`           | Before prescribing workouts | Training zones, field testing protocols      |
-| `skill/reference/load-management.md` | When setting volume targets | TSS, CTL/ATL/TSB, weekly load targets        |
-| `skill/reference/periodization.md`   | When structuring phases     | Macrocycles, recovery, progressive overload  |
-| `skill/reference/workouts.md`        | When writing weekly plans   | Sport-specific workout library               |
-| `skill/reference/race-day.md`        | Final section of plan       | Pacing strategy, nutrition                   |
+| File                                   | When to Read                                      | Contents                                                                                                   |
+| -------------------------------------- | ------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `reference/queries.md`                 | First step of assessment                          | SQL queries for athlete analysis                                                                           |
+| `reference/assessment.md`              | After running queries                             | How to interpret data, validate with athlete                                                               |
+| `reference/zones.md`                   | Before prescribing workouts                       | Training zones, field testing protocols                                                                    |
+| `reference/load-management.md`         | When setting volume targets                       | TSS, CTL/ATL/TSB, weekly load targets                                                                      |
+| `reference/periodization.md`           | When structuring phases                           | Macrocycles, recovery, progressive overload                                                                |
+| `reference/workouts.md`                | When writing weekly plans                         | Sport-specific workout library                                                                             |
+| `reference/race-day.md`                | Final section of plan                             | Pacing strategy, nutrition                                                                                 |
+| `reference/road-race-periodization.md` | When the goal race is a road 5K/10K/half/marathon | Distance-specific phase emphasis, pace-zone definitions, weekly templates (complements `periodization.md`) |
+
+**Pace and workout calculators** (adapted from ColinEberhardt/claude-running-coach, MIT):
+
+- `scripts/calculate_paces.py --distance 21.0975 --time 1:35:00 --per-km` — derives
+  Easy/Steady/Threshold/VO2max/Repetition/Race paces from a single goal time using Riegel's
+  formula. Use this instead of guessing pace ranges by hand.
+- `scripts/interval_calculator.py --unit km --warmup 2km --easy-pace 6:00 --intervals 6 --interval-dist 1km --interval-pace 4:30 --recovery 400m --cooldown 2km` — computes total distance/time and a
+  human-readable workout description for a given interval structure.
+
+**Companion skill:** once a plan exists, use the `weekly-review` skill for the recurring
+plan-vs-actual coaching conversation (it reads the same `plan.json` and `~/.claude-coach/coach.db`
+that this skill produces/uses). This skill (`coach`) is for plan creation and revision, not
+weekly check-ins.
 
 ---
 
@@ -241,22 +211,22 @@ Read these files as needed during plan creation:
 
 ### Phase 0: Setup
 
-1. Ask how athlete wants to provide data (Strava or manual)
-2. **If Strava:** Check for existing database, gather credentials if needed, run sync
+1. Ask how athlete wants to provide data (Garmin or manual)
+2. **If Garmin:** Check for existing database, run sync (auto-initializes on first run)
 3. **If Manual:** Gather fitness information through conversation
 
 ### Phase 1: Data Gathering
 
-**If using Strava:**
+**If using Garmin:**
 
-1. Read `skill/reference/queries.md` and run the assessment queries
-2. Read `skill/reference/assessment.md` to interpret the results
+1. Read `reference/queries.md` and run the assessment queries
+2. Read `reference/assessment.md` to interpret the results
 
 **If using manual data:**
 
 1. Ask the questions outlined in "Option B: Manual Data Entry" above
 2. Build the assessment object from their responses
-3. Read `skill/reference/assessment.md` for context on interpreting fitness levels
+3. Read `reference/assessment.md` for context on interpreting fitness levels
 
 ### Phase 2: Athlete Validation
 
@@ -266,18 +236,18 @@ Read these files as needed during plan creation:
 
 ### Phase 3: Zone & Load Setup
 
-6. Read `skill/reference/zones.md` to establish training zones
-7. Read `skill/reference/load-management.md` for TSS/CTL targets
+6. Read `reference/zones.md` to establish training zones
+7. Read `reference/load-management.md` for TSS/CTL targets
 
 ### Phase 4: Plan Design
 
-8. Read `skill/reference/periodization.md` for phase structure
-9. Read `skill/reference/workouts.md` to build weekly sessions
+8. Read `reference/periodization.md` for phase structure
+9. Read `reference/workouts.md` to build weekly sessions
 10. Calculate weeks until event, design phases
 
 ### Phase 5: Plan Delivery
 
-11. Read `skill/reference/race-day.md` for race execution section
+11. Read `reference/race-day.md` for race execution section
 12. Write the plan as JSON, then render to HTML (see output format below)
 
 ---
@@ -296,14 +266,14 @@ The JSON must follow the TrainingPlan schema.
 
 **Inferring Unit Preferences:**
 
-Determine the athlete's preferred units from their Strava data and event location:
+Determine the athlete's preferred units from their Garmin data and event location:
 
 | Indicator                                          | Likely Preference                            |
 | -------------------------------------------------- | -------------------------------------------- |
 | US-based events (Ironman Arizona, Boston Marathon) | Imperial: miles for bike/run, yards for swim |
 | European/Australian events                         | Metric: km for bike/run, meters for swim     |
-| Strava activities show distances in miles          | Imperial                                     |
-| Strava activities show distances in km             | Metric                                       |
+| Garmin activities show distances in miles          | Imperial                                     |
+| Garmin activities show distances in km             | Metric                                       |
 | Pool workouts in 25yd/50yd pools                   | Yards for swim                               |
 | Pool workouts in 25m/50m pools                     | Meters for swim                              |
 
@@ -542,5 +512,5 @@ After both files are created, tell the user:
 - **Zones must be established** before prescribing specific workouts
 - **Output JSON, then render HTML** - Write the plan as `.json`, then use `npx claude-coach render` to create the HTML viewer
 - **Explain the "why"** - Athletes trust and follow plans they understand
-- **Be conservative with manual data** - When working without Strava, err on the side of caution with volume and intensity
+- **Be conservative with manual data** - When working without synced training data, err on the side of caution with volume and intensity
 - **Recommend field tests** - For manual data athletes, include zone validation workouts in the first 1-2 weeks
