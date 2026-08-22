@@ -3,12 +3,17 @@
   import type { Settings } from "../stores/settings.js";
   import { formatEventDate, getDaysToEvent, getSportIcon } from "../lib/utils.js";
   import { exportPlanToCalendar, exportAllWorkouts } from "../lib/export/index.js";
+  import type { PlanChanges } from "../lib/UpdatePlan.js";
+  import type { PlanBridgeConfig } from "../stores/planBridge.js";
+  import PlanBridgeSaveControl from "./PlanBridgeSaveControl.svelte";
 
   interface Props {
     plan: TrainingPlan;
     settings: Settings;
     filters: { sport: string; status: string };
     completed: Record<string, boolean>;
+    changes: PlanChanges;
+    planBridgeConfig: PlanBridgeConfig;
     open: boolean;
     onFilterChange: (filters: { sport: string; status: string }) => void;
     onSettingsClick: () => void;
@@ -20,11 +25,21 @@
     settings,
     filters,
     completed,
+    changes,
+    planBridgeConfig,
     open = $bindable(),
     onFilterChange,
     onSettingsClick,
     onImportHelpClick,
   }: Props = $props();
+
+  const pendingChanges = $derived(
+    changes.deleted.length > 0 ||
+      Object.keys(changes.edited).length > 0 ||
+      Object.keys(changes.moved).length > 0 ||
+      Object.keys(changes.added).length > 0 ||
+      Object.values(completed).some(Boolean)
+  );
 
   // Calculate stats
   const stats = $derived(() => {
@@ -190,6 +205,15 @@
     </svg>
     Settings
   </button>
+
+  <PlanBridgeSaveControl
+    {plan}
+    {changes}
+    {completed}
+    {planBridgeConfig}
+    hasPendingChanges={pendingChanges}
+    onOpenSettings={onSettingsClick}
+  />
 
   <div class="export-section">
     {#if exportStatus}

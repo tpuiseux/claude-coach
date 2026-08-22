@@ -14,12 +14,18 @@
     type PlanChanges,
     generateWorkoutId,
   } from "./stores/changes.js";
+  import {
+    loadPlanBridgeConfig,
+    savePlanBridgeConfig,
+    type PlanBridgeConfig,
+  } from "./stores/planBridge.js";
   import type { Workout, TrainingDay } from "../schema/training-plan.js";
 
   // Reactive state
   let settings = $state(loadSettings());
   let completed = $state(loadCompleted());
   let changes = $state(loadChanges());
+  let planBridgeConfig = $state(loadPlanBridgeConfig());
   let filters = $state({ sport: "all", status: "all" });
   let sidebarOpen = $state(false);
   let settingsOpen = $state(false);
@@ -79,6 +85,11 @@
   function handleSettingsChange(newSettings: Settings) {
     settings = newSettings;
     saveSettings(newSettings);
+  }
+
+  function handlePlanBridgeConfigChange(newConfig: PlanBridgeConfig) {
+    planBridgeConfig = newConfig;
+    savePlanBridgeConfig(newConfig);
   }
 
   function handleToggleComplete(workoutId: string) {
@@ -195,7 +206,9 @@
         </svg>
       </span>
       <p>
-        Your changes are saved locally in this browser only. To back up or transfer your data,
+        Your changes are saved in this browser only, for now. Set up
+        <strong>"Configurer la sauvegarde serveur"</strong> in the sidebar to have them written
+        straight back to the plan on the server — or
         <button
           class="banner-link"
           onclick={() => {
@@ -203,7 +216,7 @@
             settingsOpen = true;
           }}
         >
-          export it from Settings
+          export a backup from Settings
         </button>.
       </p>
       <button class="banner-close" onclick={dismissBanner} aria-label="Dismiss">
@@ -221,6 +234,8 @@
     {settings}
     {filters}
     {completed}
+    {changes}
+    {planBridgeConfig}
     bind:open={sidebarOpen}
     onFilterChange={(f) => (filters = f)}
     onSettingsClick={() => (settingsOpen = true)}
@@ -264,8 +279,10 @@
 {#if settingsOpen}
   <SettingsModal
     {settings}
+    {planBridgeConfig}
     onClose={() => (settingsOpen = false)}
     onChange={handleSettingsChange}
+    onPlanBridgeConfigChange={handlePlanBridgeConfigChange}
     onOpenImportHelp={() => (importHelpOpen = true)}
   />
 {/if}

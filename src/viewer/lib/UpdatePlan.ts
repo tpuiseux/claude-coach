@@ -32,7 +32,7 @@ export interface UpdateResult {
 /**
  * Apply all local changes to the plan (browser version of modify.ts)
  */
-function applyLocalChangesToPlan(
+export function applyLocalChangesToPlan(
   plan: TrainingPlan,
   changes: PlanChanges,
   completed: Record<string, boolean>

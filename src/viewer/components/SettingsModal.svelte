@@ -12,15 +12,26 @@
   import UpdatePlanButton from "./UpdatePlanButton.svelte";
   import { loadGarminBridgeConfig, saveGarminBridgeConfig } from "../stores/garminBridge.js";
   import { checkGarminBridgeHealth } from "../lib/garminBridge.js";
+  import type { PlanBridgeConfig } from "../stores/planBridge.js";
+  import { checkPlanBridgeHealth } from "../lib/planBridge.js";
 
   interface Props {
     settings: Settings;
+    planBridgeConfig: PlanBridgeConfig;
     onClose: () => void;
     onChange: (settings: Settings) => void;
+    onPlanBridgeConfigChange: (config: PlanBridgeConfig) => void;
     onOpenImportHelp: () => void;
   }
 
-  let { settings, onClose, onChange, onOpenImportHelp }: Props = $props();
+  let {
+    settings,
+    planBridgeConfig,
+    onClose,
+    onChange,
+    onPlanBridgeConfigChange,
+    onOpenImportHelp,
+  }: Props = $props();
 
   let activeTab = $state("general");
   // Use untrack to explicitly capture initial value (intentional local copy)
@@ -41,6 +52,24 @@
     const result = await checkGarminBridgeHealth();
     garminTestStatus = { message: result.message, isError: !result.ok };
     garminTesting = false;
+  }
+
+  // Use untrack for the same reason as localSettings above (intentional local copy)
+  let localPlanBridgeConfig = $state(untrack(() => ({ ...planBridgeConfig })));
+  let planBridgeTestStatus = $state<{ message: string; isError: boolean } | null>(null);
+  let planBridgeTesting = $state(false);
+
+  function savePlanBridgeConfigLocal() {
+    onPlanBridgeConfigChange(localPlanBridgeConfig);
+  }
+
+  async function testPlanBridge() {
+    if (planBridgeTesting) return;
+    planBridgeTesting = true;
+    planBridgeTestStatus = null;
+    const result = await checkPlanBridgeHealth();
+    planBridgeTestStatus = { message: result.message, isError: !result.ok };
+    planBridgeTesting = false;
   }
 
   function handleKeydown(e: KeyboardEvent) {
@@ -590,6 +619,58 @@
               later.
             </p>
           </div>
+        </div>
+
+        <div class="settings-section">
+          <h4 class="settings-section-title">Save to Server</h4>
+          <div class="data-explainer">
+            <p>
+              This static page can't write to its own files. If you run a plan-save bridge (see
+              scripts/plan_bridge.py) — either on your own machine, or one you've deployed yourself
+              — changes you make here can be written straight back to the plan's .json/.html files,
+              so they survive clearing this browser.
+            </p>
+            <p>
+              The URL and token below are kept only in this browser's local storage — never in the
+              page itself.
+            </p>
+          </div>
+          <div class="settings-row">
+            <span class="settings-label">Bridge URL</span>
+            <input
+              type="text"
+              class="threshold-input"
+              style="flex: 1"
+              bind:value={localPlanBridgeConfig.url}
+              onchange={savePlanBridgeConfigLocal}
+              placeholder="http://127.0.0.1:8421 or https://your-site.example/training-plan/plan-bridge"
+            />
+          </div>
+          <div class="settings-row">
+            <span class="settings-label">Token</span>
+            <input
+              type="password"
+              class="threshold-input"
+              style="flex: 1"
+              bind:value={localPlanBridgeConfig.token}
+              onchange={savePlanBridgeConfigLocal}
+              placeholder="Only needed for a remotely-deployed bridge"
+            />
+          </div>
+          <div class="data-action">
+            <div class="data-action-info">
+              <span class="data-action-title">Test Connection</span>
+              <span class="data-action-desc">Checks that the bridge is reachable at this URL.</span>
+            </div>
+            <button class="data-btn help" onclick={testPlanBridge} disabled={planBridgeTesting}>
+              {planBridgeTesting ? "Testing..." : "Test"}
+            </button>
+          </div>
+          {#if planBridgeTestStatus}
+            <div class="import-status" class:error={planBridgeTestStatus.isError}>
+              {planBridgeTestStatus.message}
+            </div>
+          {/if}
         </div>
 
         <div class="settings-section">
