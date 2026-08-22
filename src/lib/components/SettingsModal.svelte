@@ -1,5 +1,6 @@
 <script lang="ts">
   import { untrack } from "svelte";
+  import { base } from "$app/paths";
   import {
     type Settings,
     type Theme,
@@ -62,6 +63,93 @@
     localSettings.swim.paceZones = recalculateSwimPaceZones(localSettings.swim.css);
     save();
   }
+
+  // Garmin connection ----------------------------------------------------
+  type GarminState = "loading" | "disconnected" | "mfa" | "connected";
+  let garminState = $state<GarminState>("loading");
+  let garminEmail = $state("");
+  let garminPassword = $state("");
+  let garminCode = $state("");
+  let garminBusy = $state(false);
+  let garminStatus = $state<{ message: string; isError: boolean } | null>(null);
+
+  $effect(() => {
+    fetch(`${base}/garmin/status`)
+      .then((r) => r.json())
+      .then((data) => {
+        garminState = data.connected ? "connected" : "disconnected";
+      })
+      .catch(() => {
+        garminState = "disconnected";
+      });
+  });
+
+  async function handleGarminConnect() {
+    if (garminBusy) return;
+    garminBusy = true;
+    garminStatus = null;
+    try {
+      const res = await fetch(`${base}/garmin/connect`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: garminEmail, password: garminPassword }),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(data?.message ?? `Connexion echouee (${res.status})`);
+      if (data.mfaRequired) {
+        garminState = "mfa";
+      } else {
+        garminState = "connected";
+        garminEmail = "";
+        garminPassword = "";
+      }
+    } catch (err) {
+      garminStatus = {
+        message: err instanceof Error ? err.message : "Connexion echouee.",
+        isError: true,
+      };
+    } finally {
+      garminBusy = false;
+    }
+  }
+
+  async function handleGarminMfa() {
+    if (garminBusy) return;
+    garminBusy = true;
+    garminStatus = null;
+    try {
+      const res = await fetch(`${base}/garmin/mfa`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: garminCode }),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(data?.message ?? `Code refuse (${res.status})`);
+      garminState = "connected";
+      garminEmail = "";
+      garminPassword = "";
+      garminCode = "";
+    } catch (err) {
+      garminStatus = {
+        message: err instanceof Error ? err.message : "Code refuse.",
+        isError: true,
+      };
+    } finally {
+      garminBusy = false;
+    }
+  }
+
+  async function handleGarminDisconnect() {
+    if (garminBusy) return;
+    garminBusy = true;
+    garminStatus = null;
+    try {
+      await fetch(`${base}/garmin/disconnect`, { method: "POST" });
+      garminState = "disconnected";
+    } finally {
+      garminBusy = false;
+    }
+  }
 </script>
 
 <svelte:window on:keydown={handleKeydown} />
@@ -82,7 +170,7 @@
       </div>
 
       <div class="settings-tabs">
-        {#each [["general", "General"], ["run", "Run"], ["bike", "Bike"], ["swim", "Swim"], ["data", "Data"], ["about", "About"]] as [id, label] (id)}
+        {#each [["general", "General"], ["run", "Run"], ["bike", "Bike"], ["swim", "Swim"], ["garmin", "Garmin"], ["data", "Data"], ["about", "About"]] as [id, label] (id)}
           <button
             class="settings-tab"
             class:active={activeTab === id}
@@ -416,6 +504,85 @@
               </p>
             </div>
           </details>
+        </div>
+      {/if}
+
+      <!-- Garmin Tab -->
+      {#if activeTab === "garmin"}
+        <div class="settings-section">
+          <h4 class="settings-section-title">Garmin Connect</h4>
+          <div class="data-explainer">
+            <p>
+              Connect your Garmin account to send workouts from this plan straight to your watch.
+              Your email and password go straight to Garmin's own login - only a session token is
+              kept, never your password.
+            </p>
+          </div>
+
+          {#if garminState === "loading"}
+            <p class="settings-label">Checking connection…</p>
+          {:else if garminState === "connected"}
+            <div class="data-action">
+              <div class="data-action-info">
+                <span class="data-action-title">Connected</span>
+                <span class="data-action-desc">Workouts can be sent to Garmin Connect.</span>
+              </div>
+              <button
+                class="data-btn danger"
+                onclick={handleGarminDisconnect}
+                disabled={garminBusy}
+              >
+                {garminBusy ? "…" : "Disconnect"}
+              </button>
+            </div>
+          {:else if garminState === "mfa"}
+            <div class="settings-row">
+              <span class="settings-label">Verification code</span>
+              <input
+                type="text"
+                inputmode="numeric"
+                class="threshold-input"
+                bind:value={garminCode}
+                placeholder="123456"
+              />
+            </div>
+            <button class="recalc-btn" onclick={handleGarminMfa} disabled={garminBusy}>
+              {garminBusy ? "Verifying…" : "Confirm code"}
+            </button>
+          {:else}
+            <div class="settings-row">
+              <span class="settings-label">Email</span>
+              <input
+                type="email"
+                class="threshold-input"
+                style="width: auto; flex: 1"
+                bind:value={garminEmail}
+                placeholder="you@example.com"
+              />
+            </div>
+            <div class="settings-row">
+              <span class="settings-label">Password</span>
+              <input
+                type="password"
+                class="threshold-input"
+                style="width: auto; flex: 1"
+                bind:value={garminPassword}
+              />
+            </div>
+            <button
+              class="recalc-btn"
+              onclick={handleGarminConnect}
+              disabled={garminBusy || !garminEmail || !garminPassword}
+            >
+              {garminBusy ? "Connecting…" : "Connect"}
+            </button>
+          {/if}
+
+          {#if garminStatus}
+            <p class="import-status" class:error={garminStatus.isError}>
+              {garminStatus.message}
+            </p>
+          {/if}
         </div>
       {/if}
 
@@ -903,6 +1070,27 @@
     background: var(--accent);
     border-color: var(--accent);
     color: var(--bg-primary);
+  }
+
+  .data-btn.danger:hover:not(:disabled) {
+    background: #ef4444;
+    border-color: #ef4444;
+    color: white;
+  }
+
+  .data-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  .import-status {
+    margin-top: 0.75rem;
+    font-size: 0.8rem;
+    color: var(--accent);
+  }
+
+  .import-status.error {
+    color: #f87171;
   }
 
   .about-header {

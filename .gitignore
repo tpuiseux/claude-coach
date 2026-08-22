@@ -41,3 +41,10 @@ npm-debug.log*
 templates/plan-viewer.html
 cloud-output/
 cloud-output/
+
+# Garmin bridge - local Python venv and its runtime state
+garmin-bridge/venv/
+garmin-bridge/__pycache__/
+garmin-bridge/*.pyc
+garmin-bridge/.garmin-tokens/
+garmin-bridge/.garmin-tokens-multiuser/

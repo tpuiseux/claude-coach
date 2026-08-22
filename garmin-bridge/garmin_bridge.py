@@ -1,0 +1,450 @@
+#!/usr/bin/env python3
+"""HTTP bridge between claude-coach and Garmin Connect.
+
+Two independent client modes share this one process:
+
+  1. Legacy (single account, browser-driven): the standalone HTML viewer's
+     "Send to Garmin" button (src/viewer/lib/garminBridge.ts) calls
+     POST /push-workout directly. It has no notion of a user - the bridge is
+     started once, already logged in to whichever account --tokenstore
+     points at (see init_api below), and every call pushes to that account.
+
+  2. Multi-tenant (per-account, server-driven): claude-coach's SvelteKit app
+     (src/lib/server/garminBridge.ts) calls the /garmin/* routes on behalf
+     of whichever athlete is logged in, passing their numeric user id. Each
+     user gets their own tokenstore file under --multiuser-tokenstore-dir,
+     loaded/refreshed on demand rather than held open for the process
+     lifetime - this bridge only ever serves the SvelteKit app, never a
+     browser directly, so nginx never routes to /garmin/*.
+
+For testing either mode without a real Garmin login: --dry-run.
+"""
+
+import argparse
+import hmac
+import json
+import os
+import sys
+import time
+from http.server import BaseHTTPRequestHandler, HTTPServer
+from pathlib import Path
+
+from garmin_lib import (
+    init_api,
+    login_from_tokenstore,
+    login_with_credentials,
+    resume_mfa,
+    save_tokenstore,
+)
+from garminconnect import (
+    GarminConnectAuthenticationError,
+    GarminConnectConnectionError,
+    GarminConnectTooManyRequestsError,
+)
+
+DEFAULT_HOST = "127.0.0.1"
+DEFAULT_PORT = 8420
+
+# How long a login started by /garmin/login may sit waiting for its matching
+# /garmin/mfa call before it's dropped. Generous, since a human has to read
+# an SMS/app code and type it in, but bounded so an abandoned flow doesn't
+# hold a half-authenticated Garmin session in memory forever.
+PENDING_LOGIN_TTL_SECONDS = 10 * 60
+
+
+def is_valid_user_id(value: str) -> bool:
+    return value.isdigit() and value != "0"
+
+
+def tokenstore_path_for(user_id: str, multiuser_dir: Path) -> str:
+    return str(multiuser_dir / f"{user_id}.json")
+
+
+def make_handler(api, dry_run, token, allowed_origins, multiuser_dir: Path):
+    # userId -> (Garmin instance mid-MFA, started_at). Only ever touched from
+    # this single-threaded HTTPServer's request handling, so no lock needed.
+    pending_logins: dict[str, tuple[object, float]] = {}
+
+    def sweep_pending_logins() -> None:
+        cutoff = time.time() - PENDING_LOGIN_TTL_SECONDS
+        expired = [uid for uid, (_, started) in pending_logins.items() if started < cutoff]
+        for uid in expired:
+            del pending_logins[uid]
+
+    def is_authorized(headers) -> bool:
+        if not token:
+            return True
+        auth = headers.get("Authorization", "")
+        provided = auth[7:] if auth.startswith("Bearer ") else ""
+        return hmac.compare_digest(provided, token)
+
+    class Handler(BaseHTTPRequestHandler):
+        def _cors(self) -> None:
+            # Reflect back the request's own Origin if it's on the allowlist, rather
+            # than always sending one fixed value - a browser only accepts a response
+            # whose Access-Control-Allow-Origin exactly matches its own origin, so a
+            # single static value breaks the moment the site is reached via a
+            # different (but still legitimate) hostname, e.g. bare domain vs "www.".
+            # The /garmin/* routes are never called from a browser (only from the
+            # SvelteKit server), so this only matters for the legacy routes, but
+            # applying it everywhere keeps the handler simple.
+            origin = self.headers.get("Origin")
+            if origin and origin in allowed_origins:
+                self.send_header("Access-Control-Allow-Origin", origin)
+                self.send_header("Vary", "Origin")
+            self.send_header("Access-Control-Allow-Methods", "POST, GET, OPTIONS")
+            self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization")
+
+        def _json(self, status: int, payload: dict) -> None:
+            body = json.dumps(payload).encode("utf-8")
+            self.send_response(status)
+            self._cors()
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+        def _read_json_body(self) -> dict | None:
+            length = int(self.headers.get("Content-Length", 0))
+            raw = self.rfile.read(length) if length else b"{}"
+            try:
+                body = json.loads(raw or b"{}")
+            except json.JSONDecodeError:
+                return None
+            return body if isinstance(body, dict) else None
+
+        def do_OPTIONS(self) -> None:
+            self.send_response(204)
+            self._cors()
+            self.end_headers()
+
+        def do_GET(self) -> None:
+            if self.path == "/health":
+                self._json(200, {"status": "ok", "dryRun": dry_run, "authRequired": bool(token)})
+                return
+
+            if self.path.startswith("/garmin/status"):
+                self._handle_garmin_status()
+                return
+
+            self._json(404, {"error": "not found"})
+
+        def do_POST(self) -> None:
+            if self.path == "/push-workout":
+                self._handle_legacy_push_workout()
+                return
+            if self.path == "/garmin/login":
+                self._handle_garmin_login()
+                return
+            if self.path == "/garmin/mfa":
+                self._handle_garmin_mfa()
+                return
+            if self.path == "/garmin/disconnect":
+                self._handle_garmin_disconnect()
+                return
+            if self.path == "/garmin/push-workout":
+                self._handle_garmin_push_workout()
+                return
+
+            self._json(404, {"error": "not found"})
+
+        # -- Legacy, single-account routes -----------------------------------
+
+        def _handle_legacy_push_workout(self) -> None:
+            if not is_authorized(self.headers):
+                self._json(401, {"error": "unauthorized"})
+                return
+
+            body = self._read_json_body()
+            if body is None:
+                self._json(400, {"error": "invalid JSON body"})
+                return
+
+            workout_json = body.get("workout")
+            if not isinstance(workout_json, dict):
+                self._json(400, {"error": "missing 'workout' payload"})
+                return
+
+            date = body.get("date")
+
+            if dry_run:
+                self._json(
+                    200,
+                    {
+                        "workoutId": "dry-run",
+                        "scheduled": bool(date),
+                        "date": date,
+                        "payload": workout_json,
+                    },
+                )
+                return
+
+            try:
+                result = api.upload_workout(workout_json)
+                workout_id = result["workoutId"]
+                if date:
+                    api.schedule_workout(workout_id, date)
+                self._json(200, {"workoutId": workout_id, "scheduled": bool(date), "date": date})
+            except Exception as e:  # surfaced as a message in the button's UI
+                self._json(502, {"error": str(e)})
+
+        # -- Multi-tenant routes ----------------------------------------------
+
+        def _handle_garmin_login(self) -> None:
+            if not is_authorized(self.headers):
+                self._json(401, {"error": "unauthorized"})
+                return
+
+            body = self._read_json_body()
+            if body is None:
+                self._json(400, {"error": "invalid JSON body"})
+                return
+
+            user_id = str(body.get("userId", ""))
+            email = body.get("email")
+            password = body.get("password")
+            if not is_valid_user_id(user_id) or not email or not password:
+                self._json(400, {"error": "userId, email and password are required"})
+                return
+
+            sweep_pending_logins()
+
+            if dry_run:
+                if password == "mfa":
+                    pending_logins[user_id] = ("dry-run", time.time())
+                    self._json(200, {"ok": True, "mfaRequired": True})
+                else:
+                    Path(tokenstore_path_for(user_id, multiuser_dir)).parent.mkdir(
+                        parents=True, exist_ok=True
+                    )
+                    Path(tokenstore_path_for(user_id, multiuser_dir)).write_text(
+                        json.dumps({"dryRun": True})
+                    )
+                    self._json(200, {"ok": True, "mfaRequired": False})
+                return
+
+            try:
+                garmin, mfa_status = login_with_credentials(email, password)
+            except GarminConnectAuthenticationError:
+                self._json(401, {"error": "Identifiants Garmin incorrects."})
+                return
+            except GarminConnectTooManyRequestsError:
+                self._json(429, {"error": "Trop de tentatives - reessaie plus tard."})
+                return
+            except GarminConnectConnectionError as e:
+                self._json(502, {"error": f"Connexion a Garmin impossible: {e}"})
+                return
+
+            if mfa_status:
+                pending_logins[user_id] = (garmin, time.time())
+                self._json(200, {"ok": True, "mfaRequired": True})
+                return
+
+            save_tokenstore(garmin, tokenstore_path_for(user_id, multiuser_dir))
+            self._json(200, {"ok": True, "mfaRequired": False})
+
+        def _handle_garmin_mfa(self) -> None:
+            if not is_authorized(self.headers):
+                self._json(401, {"error": "unauthorized"})
+                return
+
+            body = self._read_json_body()
+            if body is None:
+                self._json(400, {"error": "invalid JSON body"})
+                return
+
+            user_id = str(body.get("userId", ""))
+            code = body.get("code")
+            if not is_valid_user_id(user_id) or not code:
+                self._json(400, {"error": "userId and code are required"})
+                return
+
+            sweep_pending_logins()
+
+            pending = pending_logins.pop(user_id, None)
+            if pending is None:
+                self._json(400, {"error": "Pas de connexion en attente - recommence."})
+                return
+
+            if dry_run:
+                Path(tokenstore_path_for(user_id, multiuser_dir)).parent.mkdir(
+                    parents=True, exist_ok=True
+                )
+                Path(tokenstore_path_for(user_id, multiuser_dir)).write_text(
+                    json.dumps({"dryRun": True})
+                )
+                self._json(200, {"ok": True})
+                return
+
+            garmin, _ = pending
+            try:
+                resume_mfa(garmin, code)
+            except GarminConnectAuthenticationError:
+                self._json(401, {"error": "Code incorrect - recommence la connexion."})
+                return
+            except GarminConnectTooManyRequestsError:
+                self._json(429, {"error": "Trop de tentatives - reessaie plus tard."})
+                return
+            except GarminConnectConnectionError as e:
+                self._json(502, {"error": f"Connexion a Garmin impossible: {e}"})
+                return
+
+            save_tokenstore(garmin, tokenstore_path_for(user_id, multiuser_dir))
+            self._json(200, {"ok": True})
+
+        def _handle_garmin_status(self) -> None:
+            if not is_authorized(self.headers):
+                self._json(401, {"error": "unauthorized"})
+                return
+
+            query = self.path.split("?", 1)[1] if "?" in self.path else ""
+            params = dict(p.split("=", 1) for p in query.split("&") if "=" in p)
+            user_id = params.get("userId", "")
+            if not is_valid_user_id(user_id):
+                self._json(400, {"error": "userId is required"})
+                return
+
+            connected = Path(tokenstore_path_for(user_id, multiuser_dir)).exists()
+            self._json(200, {"connected": connected})
+
+        def _handle_garmin_disconnect(self) -> None:
+            if not is_authorized(self.headers):
+                self._json(401, {"error": "unauthorized"})
+                return
+
+            body = self._read_json_body()
+            if body is None:
+                self._json(400, {"error": "invalid JSON body"})
+                return
+
+            user_id = str(body.get("userId", ""))
+            if not is_valid_user_id(user_id):
+                self._json(400, {"error": "userId is required"})
+                return
+
+            pending_logins.pop(user_id, None)
+            Path(tokenstore_path_for(user_id, multiuser_dir)).unlink(missing_ok=True)
+            self._json(200, {"ok": True})
+
+        def _handle_garmin_push_workout(self) -> None:
+            if not is_authorized(self.headers):
+                self._json(401, {"error": "unauthorized"})
+                return
+
+            body = self._read_json_body()
+            if body is None:
+                self._json(400, {"error": "invalid JSON body"})
+                return
+
+            user_id = str(body.get("userId", ""))
+            workout_json = body.get("workout")
+            date = body.get("date")
+            if not is_valid_user_id(user_id) or not isinstance(workout_json, dict):
+                self._json(400, {"error": "userId and workout are required"})
+                return
+
+            if dry_run:
+                self._json(
+                    200,
+                    {
+                        "workoutId": "dry-run",
+                        "scheduled": bool(date),
+                        "date": date,
+                        "payload": workout_json,
+                    },
+                )
+                return
+
+            tokenstore = tokenstore_path_for(user_id, multiuser_dir)
+            if not Path(tokenstore).exists():
+                self._json(409, {"error": "Compte Garmin non connecte pour cet utilisateur."})
+                return
+
+            try:
+                garmin = login_from_tokenstore(tokenstore)
+            except (GarminConnectAuthenticationError, GarminConnectConnectionError):
+                self._json(
+                    409,
+                    {"error": "Session Garmin expiree - reconnecte le compte dans les Settings."},
+                )
+                return
+
+            try:
+                result = garmin.upload_workout(workout_json)
+                workout_id = result["workoutId"]
+                if date:
+                    garmin.schedule_workout(workout_id, date)
+                self._json(200, {"workoutId": workout_id, "scheduled": bool(date), "date": date})
+            except Exception as e:
+                self._json(502, {"error": str(e)})
+
+        def log_message(self, format: str, *args) -> None:  # noqa: A002 - matches base signature
+            print("[garmin-bridge]", format % args)
+
+    return Handler
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("--host", default=DEFAULT_HOST, help=f"Bind address (default: {DEFAULT_HOST})")
+    parser.add_argument("--port", type=int, default=DEFAULT_PORT)
+    parser.add_argument(
+        "--allowed-origin",
+        default=os.getenv("GARMIN_BRIDGE_ALLOWED_ORIGIN", ""),
+        help="Comma-separated origins allowed to call this bridge from a browser "
+        "(e.g. https://your-site.example,https://www.your-site.example — include "
+        "every hostname variant the page might actually be loaded from). Not a real "
+        "security boundary on its own (only browsers honor CORS) — the bearer token "
+        "is what actually protects the endpoint. Irrelevant to the /garmin/* routes, "
+        "which are only ever called server-to-server.",
+    )
+    parser.add_argument(
+        "--tokenstore",
+        default=os.getenv("GARMINTOKENS", str(Path("~/.garminconnect").expanduser())),
+        help="Legacy single-account tokenstore, loaded once at startup for /push-workout.",
+    )
+    parser.add_argument(
+        "--multiuser-tokenstore-dir",
+        default=os.getenv(
+            "GARMIN_MULTIUSER_TOKENSTORE_DIR", str(Path("~/.garmin-tokens-multiuser").expanduser())
+        ),
+        help="Directory holding one tokenstore file per user id, for the /garmin/* routes.",
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Ne se connecte pas a Garmin ; renvoie le payload recu tel quel (pour tester le bouton sans compte reel)",
+    )
+    args = parser.parse_args()
+
+    token = os.getenv("GARMIN_BRIDGE_TOKEN", "")
+    if args.host != "127.0.0.1" and not token:
+        print(
+            f"Refuse de demarrer sur --host {args.host} sans GARMIN_BRIDGE_TOKEN defini.\n"
+            "Binder sur une adresse joignable sans jeton d'auth exposerait ton compte Garmin "
+            "a quiconque trouve l'URL. Definis GARMIN_BRIDGE_TOKEN ou reviens a 127.0.0.1.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+    api = None if args.dry_run else init_api(args.tokenstore)
+
+    multiuser_dir = Path(args.multiuser_tokenstore_dir).expanduser()
+    multiuser_dir.mkdir(parents=True, exist_ok=True)
+
+    allowed_origins = {o.strip() for o in args.allowed_origin.split(",") if o.strip()}
+    handler = make_handler(api, args.dry_run, token, allowed_origins, multiuser_dir)
+    server = HTTPServer((args.host, args.port), handler)
+    mode = "DRY-RUN (aucun envoi reel a Garmin)" if args.dry_run else "connecte a Garmin"
+    auth_state = "jeton requis" if token else "AUCUNE AUTH (local uniquement)"
+    print(f"Garmin bridge en ecoute sur http://{args.host}:{args.port} [{mode}, {auth_state}]")
+    print(f"Tokenstores multi-comptes: {multiuser_dir}")
+    print("Laisse ce process actif, puis clique sur le bouton Garmin dans le plan HTML (n'importe quelle seance).")
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        print("\nArret du bridge.")
+
+
+if __name__ == "__main__":
+    main()

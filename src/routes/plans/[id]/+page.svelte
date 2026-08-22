@@ -172,6 +172,7 @@
     workout={modalState.mode === "create" ? null : modalState.workout}
     day={modalState.day}
     mode={modalState.mode}
+    planId={page.params.id ?? ""}
     {settings}
     onClose={() => (modalState = null)}
     onToggleComplete={handleToggleComplete}

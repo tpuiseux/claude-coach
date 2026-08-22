@@ -1,8 +1,10 @@
 <script lang="ts">
   import { untrack } from "svelte";
+  import { base } from "$app/paths";
   import type { Workout, TrainingDay, Sport, WorkoutType } from "../../schema/training-plan.js";
   import type { Settings } from "../settings.js";
   import { formatDuration, formatDistance, formatDate, getZoneInfo } from "../utils.js";
+  import { isGarminConnectSupported } from "../garminSports.js";
   import {
     exportWorkout,
     getAvailableFormats,
@@ -18,6 +20,7 @@
     workout: Workout | null; // null for create mode
     day: TrainingDay;
     settings: Settings;
+    planId: string;
     mode?: Mode;
     onClose: () => void;
     onToggleComplete: (workoutId: string) => void;
@@ -29,6 +32,7 @@
     workout,
     day,
     settings,
+    planId,
     mode = "view",
     onClose,
     onToggleComplete,
@@ -155,6 +159,35 @@
 
   const availableFormats = $derived(workout ? getAvailableFormats(workout.sport) : []);
   const canExport = $derived(availableFormats.length > 0);
+
+  let garminSending = $state(false);
+
+  async function handleSendToGarmin() {
+    if (!workout || garminSending) return;
+    garminSending = true;
+    exportStatus = { message: "Sending to Garmin...", isError: false };
+
+    try {
+      const res = await fetch(`${base}/plans/${planId}/workouts/${workout.id}/garmin`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ date: day.date }),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(data?.message ?? `Envoi echoue (${res.status})`);
+      exportStatus = { message: "Sent to Garmin Connect.", isError: false };
+    } catch (err) {
+      exportStatus = {
+        message: err instanceof Error ? err.message : "Envoi Garmin echoue.",
+        isError: true,
+      };
+    } finally {
+      garminSending = false;
+      setTimeout(() => {
+        exportStatus = null;
+      }, 4000);
+    }
+  }
 
   // Derive displayed workout (for view mode)
   const displayWorkout = $derived(
@@ -353,6 +386,19 @@
               />
             </svg>
           </button>
+          {#if workout && isGarminConnectSupported(displayWorkout.sport)}
+            <button
+              class="icon-btn garmin"
+              onclick={handleSendToGarmin}
+              disabled={garminSending}
+              title="Send to Garmin"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 2v20M2 12h20" />
+                <circle cx="12" cy="12" r="9" />
+              </svg>
+            </button>
+          {/if}
           {#if canExport}
             <div class="export-dropdown">
               <button
@@ -729,6 +775,17 @@
     background: var(--bg-elevated);
     border-color: var(--border-medium);
     color: var(--text-primary);
+  }
+
+  .icon-btn.garmin:hover:not(:disabled) {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--bg-primary);
+  }
+
+  .icon-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
   }
 
   .complete-btn {
