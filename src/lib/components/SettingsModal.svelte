@@ -274,7 +274,7 @@
             <div class="zone-row header">
               <span>Zone</span><span>Name</span><span>Low</span><span>High</span>
             </div>
-            {#each localSettings.run.hrZones as zone, i (zone.zone)}
+            {#each localSettings.run.hrZones as zone, i (i)}
               <div class="zone-row">
                 <span class="zone-badge z{zone.zone}">Z{zone.zone}</span>
                 <span class="zone-name">{zone.name}</span>
@@ -322,7 +322,7 @@
             <div class="zone-row header">
               <span>Zone</span><span>Name</span><span>Pace/km</span>
             </div>
-            {#each localSettings.run.paceZones as zone, i (zone.zone)}
+            {#each localSettings.run.paceZones as zone, i (i)}
               <div class="zone-row">
                 <span class="zone-badge z{i + 1}">{zone.zone}</span>
                 <span class="zone-name">{zone.name}</span>
@@ -369,7 +369,7 @@
             <div class="zone-row header">
               <span>Zone</span><span>Name</span><span>Low</span><span>High</span>
             </div>
-            {#each localSettings.bike.hrZones as zone, i (zone.zone)}
+            {#each localSettings.bike.hrZones as zone, i (i)}
               <div class="zone-row">
                 <span class="zone-badge z{zone.zone}">Z{zone.zone}</span>
                 <span class="zone-name">{zone.name}</span>
@@ -419,7 +419,7 @@
             <div class="zone-row header">
               <span>Zone</span><span>Name</span><span>Low W</span><span>High W</span>
             </div>
-            {#each localSettings.bike.powerZones as zone, i (zone.zone)}
+            {#each localSettings.bike.powerZones as zone, i (i)}
               <div class="zone-row">
                 <span class="zone-badge z{zone.zone}">Z{zone.zone}</span>
                 <span class="zone-name">{zone.name}</span>
@@ -473,7 +473,7 @@
             <div class="zone-row header">
               <span>Zone</span><span>Name</span><span>Offset</span><span>Pace/100</span>
             </div>
-            {#each localSettings.swim.paceZones as zone, i (zone.zone)}
+            {#each localSettings.swim.paceZones as zone, i (i)}
               <div class="zone-row">
                 <span class="zone-badge z{zone.zone}">Z{zone.zone}</span>
                 <span class="zone-name">{zone.name}</span>
