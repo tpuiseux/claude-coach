@@ -6,8 +6,10 @@ garmin_bridge.py (local HTTP bridge for the HTML viewer's button).
 import json
 import os
 import sys
+import time
 from getpass import getpass
 from pathlib import Path
+from typing import Callable, TypeVar
 
 from garminconnect import (
     Garmin,
@@ -26,7 +28,7 @@ from garminconnect.workout import (
     create_warmup_step,
 )
 
-PLAN_PATH = Path(__file__).resolve().parent.parent / "10km-stade-toulousain-2026-09-06.json"
+T = TypeVar("T")
 
 
 # ---------------------------------------------------------------------------
@@ -114,6 +116,37 @@ def login_from_tokenstore(tokenstore: str) -> Garmin:
     garmin = Garmin()
     garmin.login(tokenstore)
     return garmin
+
+
+# Rate-limit backoff is longer than connection-error backoff - a 429 means
+# "you're calling too often," so retrying fast just makes it worse.
+RATE_LIMIT_DELAYS = [10, 30, 60]
+CONNECTION_ERROR_DELAYS = [3, 8, 15]
+
+
+def call_with_retry(fn: Callable[..., T], *args, label: str = "", **kwargs) -> T:
+    """Call fn(*args, **kwargs), retrying on rate-limit or transient connection
+    errors with backoff. Raises the last error if every attempt fails.
+    """
+    attempts = max(len(RATE_LIMIT_DELAYS), len(CONNECTION_ERROR_DELAYS)) + 1
+
+    for attempt in range(attempts):
+        try:
+            return fn(*args, **kwargs)
+        except GarminConnectTooManyRequestsError:
+            if attempt >= len(RATE_LIMIT_DELAYS):
+                raise
+            delay = RATE_LIMIT_DELAYS[attempt]
+            print(f"  [{label}] rate limited (429), retrying in {delay}s...")
+            time.sleep(delay)
+        except GarminConnectConnectionError:
+            if attempt >= len(CONNECTION_ERROR_DELAYS):
+                raise
+            delay = CONNECTION_ERROR_DELAYS[attempt]
+            print(f"  [{label}] connection error, retrying in {delay}s...")
+            time.sleep(delay)
+
+    raise AssertionError("unreachable")  # loop always returns or raises
 
 
 # ---------------------------------------------------------------------------

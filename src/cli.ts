@@ -73,6 +73,10 @@ interface HelpArgs {
   command: "help";
 }
 
+interface InitArgs {
+  command: "init";
+}
+
 interface ModifyArgs {
   command: "modify";
   backup: string;
@@ -80,7 +84,7 @@ interface ModifyArgs {
   output?: string;
 }
 
-type CliArgs = SyncArgs | RenderArgs | QueryArgs | AuthArgs | HelpArgs | ModifyArgs;
+type CliArgs = SyncArgs | RenderArgs | QueryArgs | AuthArgs | HelpArgs | ModifyArgs | InitArgs;
 
 function parseArgs(): CliArgs {
   const args = process.argv.slice(2);
@@ -202,6 +206,10 @@ function parseArgs(): CliArgs {
     return { command: "help" };
   }
 
+  if (args[0] === "init") {
+    return { command: "init" };
+  }
+
   log.error(`Unknown command: ${args[0]}`);
   process.exit(1);
 }
@@ -213,12 +221,16 @@ Claude Coach - Training Plan Tools
 Usage: npx claude-coach <command> [options]
 
 Commands:
+  init              Create/update the database schema (needed once before a Garmin sync)
   sync              Sync activities from Strava
   auth              Get Strava authorization URL or exchange code for tokens
   render <file>     Render a training plan JSON to HTML
   query <sql>       Run a SQL query against the database
   modify            Apply backup changes to a training plan
   help              Show this help message
+
+Garmin Connect (instead of Strava): see garmin-bridge/sync_activities.py -
+run 'npx claude-coach init' once, then that script instead of 'sync'/'auth'.
 
 Auth Options (for headless/Claude environments):
   --client-id=ID        Strava API client ID
@@ -268,6 +280,18 @@ Examples:
   # Save modified plan to a new file
   npx claude-coach modify -b backup.json -p plan.json -o modified_plan.json
 `);
+}
+
+// ============================================================================
+// Init Command - creates/updates the DB schema without needing Strava creds,
+// so the Garmin sync script (garmin-bridge/sync_activities.py) has somewhere
+// to write. Idempotent (schema.ts's DDL is all CREATE TABLE IF NOT EXISTS).
+// ============================================================================
+
+async function runInit(): Promise<void> {
+  await initDatabase();
+  migrate();
+  log.success(`Database ready at ${getDbPath()}`);
 }
 
 // ============================================================================
@@ -944,6 +968,9 @@ async function main() {
   switch (args.command) {
     case "help":
       printHelp();
+      break;
+    case "init":
+      await runInit();
       break;
     case "auth":
       await runAuth(args);
