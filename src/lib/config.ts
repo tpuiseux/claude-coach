@@ -40,7 +40,10 @@ export function getTokensPath(): string {
 }
 
 export function getDbPath(): string {
-  return DB_FILE;
+  // Overridable so tests (and, later, the deployed web app's Docker volume)
+  // can point at a different file instead of the CLI's default per-machine
+  // ~/.claude-coach/coach.db.
+  return process.env.CLAUDE_COACH_DB_PATH || DB_FILE;
 }
 
 export function configExists(): boolean {

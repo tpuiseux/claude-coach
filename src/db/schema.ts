@@ -1,3 +1,10 @@
+// Source of truth for the DDL - kept as a plain TS string (not read from
+// schema.sql via fs at runtime) so it works identically whether this module
+// runs under tsx (the CLI) or gets bundled by Vite for the SvelteKit server,
+// where a readFileSync relative to the compiled file's location isn't
+// reliable (Vite doesn't copy arbitrary runtime-referenced files next to
+// its output chunks the way `tsc` + a manual `cp` step does for the CLI).
+export const schema = `
 -- Core activity data
 CREATE TABLE IF NOT EXISTS activities (
   id INTEGER PRIMARY KEY,           -- Strava activity ID
@@ -103,3 +110,49 @@ SELECT
 FROM activities
 ORDER BY start_date DESC
 LIMIT 50;
+
+-- ============================================================================
+-- Multi-user platform: accounts, sessions, plans
+--
+-- activities/athlete/goals/sync_log above predate multi-user support and
+-- gain a \`user_id\` column too, but SQLite's ALTER TABLE ADD COLUMN isn't
+-- idempotent (re-running it errors with "duplicate column"), which this
+-- whole file otherwise relies on - so those four ADD COLUMNs live in
+-- migrate.ts as a conditional step instead of here.
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS users (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  email TEXT UNIQUE NOT NULL,
+  password_hash TEXT NOT NULL,      -- "scrypt:<salt-hex>:<hash-hex>", see src/auth/password.ts
+  name TEXT,
+  created_at TEXT DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS sessions (
+  id TEXT PRIMARY KEY,              -- random opaque token; this *is* the cookie value
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  expires_at TEXT NOT NULL,
+  created_at TEXT DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);
+
+CREATE TABLE IF NOT EXISTS plans (
+  id TEXT PRIMARY KEY,              -- matches TrainingPlan.meta.id
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  event TEXT,
+  event_date TEXT,
+  data TEXT NOT NULL,               -- full TrainingPlan JSON blob
+  created_at TEXT DEFAULT (datetime('now')),
+  updated_at TEXT DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_plans_user ON plans(user_id);
+
+CREATE TABLE IF NOT EXISTS garmin_credentials (
+  user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  tokenstore_path TEXT NOT NULL,
+  connected_at TEXT DEFAULT (datetime('now'))
+);
+`;
