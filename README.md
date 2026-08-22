@@ -2,7 +2,7 @@
 
 Claude Coach allows you to use Claude to create custom-tailored training programs for triathlons, marathons, and other endurance activities. Using a data-driven approach and principles from top training plans, Claude will create a training plan that's uniquely fit for you, your personal fitness, and the constraints you have in the next couple of weeks. Maybe you're recovering from an injury, maybe you're traveling and don't have access to a pool or track in a certain week - tell Claude about it and it'll create a plan that works for you.
 
-The output is a beautiful training plan app that allows you to add, edit, or move workouts, mark them as complete, and update key training data like heart rate zones, LTHR, threshold paces, FTP, and others. Your data is kept locally in your browser.
+By default, the output is a self-contained HTML file - a training plan app that allows you to add, edit, or move workouts, mark them as complete, and update key training data like heart rate zones, LTHR, threshold paces, FTP, and others. Your data is kept locally in your browser. If you'd rather have your plan(s) live on a server you control instead - with real accounts and no browser storage involved - see [Self-Hosting the Web App](#self-hosting-the-web-app-optional) below.
 
 Workouts can be exported as simple calendar events (.ics), Zwift (.zwo), Garmin (.fit), or TrainerRoad/ERG (.mrc) workouts.
 
@@ -12,7 +12,7 @@ See example training plans at [felixrieseberg.github.io/claude-coach](https://fe
 
 ## Installation & Creating a training plan
 
-I happen to work at Anthropic, so this tool is optimized for Claude. To use this tool, you need access to Claude.ai or Claude Code with network access for Skills. Depending on user/admin settings, Skills may have full, partial, or no network access.
+To use this tool, you need access to Claude.ai or Claude Code with network access for Skills. Depending on user/admin settings, Skills may have full, partial, or no network access.
 
 Syncing all your Strava activities and creating a tailored training plan takes ca. 15 minutes.
 
@@ -85,6 +85,84 @@ In the next step, Claude will ask you about yourself, the event you're training 
 - Equipment access (pool availability, trainer, etc.)
 
 Claude will use this information to create a plan tailored to your current fitness level. The more detail you provide, the better your plan will be.
+
+## Self-Hosting the Web App (Optional)
+
+Instead of a static HTML file, you can run Claude Coach as a small multi-user web app: real accounts (email + password), plans stored in a server-side SQLite database, and a UI to import/edit them - useful if you're coaching a few people, or just want your own plan to survive clearing your browser. There's no public sign-up; accounts are created by whoever runs the server.
+
+This is optional and separate from the default skill workflow above - most people don't need it.
+
+**Requirements:** Docker (recommended), or Node.js 22.5+ directly (needed for the built-in `node:sqlite` module the app uses).
+
+### 1. Build and run
+
+```bash
+git clone https://github.com/tpuiseux/claude-coach.git
+cd claude-coach
+docker build --build-arg BASE_PATH= -t claude-coach-web .
+```
+
+`BASE_PATH` is baked in at build time - leave it empty to serve from the domain root, or set it (e.g. `/training-plan`) if you're putting the app behind a reverse proxy on a subpath.
+
+Run it with a persistent volume for the database:
+
+```yaml
+# compose.yml
+services:
+  claude-coach-web:
+    image: claude-coach-web
+    ports:
+      - "3000:3000"
+    environment:
+      - CLAUDE_COACH_DB_PATH=/data/coach.db
+      - ORIGIN=https://your-domain.example
+      - PORT=3000
+    volumes:
+      - ./data:/data
+```
+
+```bash
+docker compose up -d
+```
+
+### 2. Create an account
+
+The admin scripts need `devDependencies` (they're not in the production image), so run them from a local clone instead - pointed at the same database file your container's volume uses:
+
+```bash
+npm install
+CLAUDE_COACH_DB_PATH=./data/coach.db npm run create-user -- --email you@example.com --name "Your Name"
+```
+
+It'll prompt for a password (or pass `--password` to script it non-interactively). Repeat for each athlete you're setting up.
+
+### 3. Import a plan
+
+Generate a plan as usual with the `coach` skill, then log in to the web app and use the "Import plan" button on the dashboard to upload the resulting JSON file. Re-importing the same file later (e.g. after a plan revision) updates it in place.
+
+If you already have a `~/.claude-coach/coach.db` from using the CLI/skill directly on this machine, `npm run migrate-to-multiuser -- --email you@example.com --plan /path/to/plan.json` attaches that existing data (synced activities, etc.) to a freshly created account in one step, instead of starting from an empty database.
+
+### 4. Garmin Connect integration (optional)
+
+Workouts can be pushed straight to a connected Garmin Connect account from the web app (Settings → Garmin, then a "Send to Garmin" button on each workout). This needs a small Python bridge running alongside the web app - the app never talks to Garmin directly, and the bridge should **never** be exposed publicly.
+
+```bash
+cd garmin-bridge
+python3 -m venv venv
+./venv/bin/pip install -r requirements.txt
+GARMIN_BRIDGE_TOKEN=<a random secret> ./venv/bin/python3 garmin_bridge.py --host 127.0.0.1 --port 8420
+```
+
+Then point the web app at it (add to its environment):
+
+```
+GARMIN_BRIDGE_URL=http://127.0.0.1:8420
+GARMIN_BRIDGE_TOKEN=<the same random secret>
+```
+
+If the web app runs in Docker and the bridge runs directly on the host (as above), `127.0.0.1` inside the container won't reach it - use the host's address on the Docker bridge network instead (`http://172.17.0.1:8420` on Linux, or `http://host.docker.internal:8420` on Docker Desktop for Mac/Windows).
+
+Each connected athlete gets their own Garmin session token, stored server-side under `~/.garmin-tokens-multiuser/` by default (configurable via `--multiuser-tokenstore-dir`) - never their password, which is only used once, in-memory, to establish that session.
 
 # About
 
