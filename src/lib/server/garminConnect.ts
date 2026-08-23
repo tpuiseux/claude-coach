@@ -123,23 +123,27 @@ function resolveTarget(
   targetValueTwo?: number;
 } {
   if (step.intensity?.unit === "pace_zone") {
-    // Prefer explicit valueLow/valueHigh (seconds/km; valueLow = faster/smaller,
-    // valueHigh = slower/larger) when the plan sets them directly on the step —
-    // more precise than a named-zone lookup, and works for blended/custom paces
-    // that don't line up with a single named zone.
-    if (step.intensity.valueLow !== undefined && step.intensity.valueHigh !== undefined) {
-      return {
-        targetType: GARMIN_TARGET_PACE_ZONE,
-        targetValueOne: 1000 / step.intensity.valueHigh, // slower bound -> lower speed
-        targetValueTwo: 1000 / step.intensity.valueLow, // faster bound -> higher speed
-      };
-    }
+    // Prefer a live lookup against the plan's current zones (Settings -> Run ->
+    // Pace Zones) over the step's own valueLow/valueHigh - those get baked in
+    // once when a workout is generated/added and never move again, so trusting
+    // them here would mean recalculating your threshold pace could never
+    // change what a plan already pushed to Garmin, no matter how it's edited.
+    // Only fall back to the baked-in bounds for a description that doesn't
+    // match any current zone (a custom/blended pace with no single zone to
+    // look up), where they're the only source of truth available.
     const range = findPlanPaceZoneSpeedRange(plan, step.intensity.description);
     if (range) {
       return {
         targetType: GARMIN_TARGET_PACE_ZONE,
         targetValueOne: range.min,
         targetValueTwo: range.max,
+      };
+    }
+    if (step.intensity.valueLow !== undefined && step.intensity.valueHigh !== undefined) {
+      return {
+        targetType: GARMIN_TARGET_PACE_ZONE,
+        targetValueOne: 1000 / step.intensity.valueHigh, // slower bound -> lower speed
+        targetValueTwo: 1000 / step.intensity.valueLow, // faster bound -> higher speed
       };
     }
   }
