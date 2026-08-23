@@ -15,10 +15,11 @@
   ],
   "scripts": {
     "start": "tsx src/cli.ts",
-    "build": "npm run build:ts && npm run build:viewer && npm run build:skill",
+    "build": "npm run build:ts && npm run build:viewer && npm run build:skill && npm run build:weekly-review-skill",
     "build:ts": "tsc -p tsconfig.cli.json",
     "build:viewer": "vite build --config vite.config.viewer.ts",
     "build:skill": "mkdir -p dist skill/garmin-bridge && cp garmin-bridge/garmin_lib.py garmin-bridge/sync_activities.py garmin-bridge/requirements.txt skill/garmin-bridge/ && cd skill && zip -r ../dist/coach-skill.zip . -x '*.DS_Store' && cd .. && rm -rf skill/garmin-bridge && echo 'Skill packaged to dist/coach-skill.zip'",
+    "build:weekly-review-skill": "mkdir -p dist weekly-review-skill/garmin-bridge && cp garmin-bridge/garmin_lib.py garmin-bridge/sync_activities.py garmin-bridge/sync_wellness.py garmin-bridge/wellness_schema.sql garmin-bridge/requirements.txt weekly-review-skill/garmin-bridge/ && cd weekly-review-skill && zip -r ../dist/weekly-review-skill.zip . -x '*.DS_Store' && cd .. && rm -rf weekly-review-skill/garmin-bridge && echo 'Skill packaged to dist/weekly-review-skill.zip'",
     "build:website": "node scripts/build-website.js",
     "dev": "tsx watch src/cli.ts",
     "dev:viewer": "vite --config vite.config.viewer.ts",

@@ -49,6 +49,8 @@ garmin-bridge/*.pyc
 garmin-bridge/.garmin-tokens/
 garmin-bridge/.garmin-tokens-multiuser/
 
-# Copied into skill/ by build:skill when packaging the zip - not checked in,
+# Copied into skill/ or weekly-review-skill/ by build:skill /
+# build:weekly-review-skill when packaging their zips - not checked in,
 # garmin-bridge/ at the repo root is the single source of truth
 skill/garmin-bridge/
+weekly-review-skill/garmin-bridge/
