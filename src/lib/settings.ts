@@ -227,14 +227,23 @@ export function recalculatePowerZones(ftp: number): PowerZone[] {
   }));
 }
 
+/**
+ * Covers the zones that scale as a fixed % of threshold pace: E/S/T/I/R.
+ * Deliberately does NOT include Race Pace (RP) - per reference/zones.md,
+ * that one tracks the goal race's distance (~Zone 5b for 5K down to ~Zone 3
+ * for marathon), not a fixed offset from threshold, so there's no single
+ * factor that's correct for every plan. Callers should merge this into the
+ * existing zone list rather than replacing it outright, so RP (and any
+ * other non-standard zone a plan might have) survives a recalculation.
+ */
 export function recalculateRunPaceZones(thresholdPace: string): PaceZone[] {
   const tSeconds = paceToSeconds(thresholdPace);
   const zones = [
-    { zone: "E", name: "Easy", factor: 1.18 },
-    { zone: "M", name: "Marathon", factor: 1.07 },
-    { zone: "T", name: "Threshold", factor: 1.0 },
-    { zone: "I", name: "Interval", factor: 0.89 },
-    { zone: "R", name: "Repetition", factor: 0.82 },
+    { zone: "E", name: "Easy (E)", factor: 1.18 },
+    { zone: "S", name: "Steady (S)", factor: 1.07 },
+    { zone: "T", name: "Threshold (T)", factor: 1.0 },
+    { zone: "I", name: "VO2max (I)", factor: 0.89 },
+    { zone: "R", name: "Repetition (R)", factor: 0.82 },
   ];
   return zones.map((z) => ({
     zone: z.zone,
