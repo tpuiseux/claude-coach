@@ -268,9 +268,19 @@ function simpleSteps(
 }
 
 /** Build a Garmin Connect workout-service payload for any supported workout. */
+/** Prefix "W5 " onto a workout name for the given week, unless it's already
+ * there (e.g. a plan whose workouts already name themselves that way) - so
+ * this is safe to call regardless of the plan's own naming convention. */
+function withWeekPrefix(name: string, weekNumber?: number): string {
+  if (weekNumber === undefined) return name;
+  if (new RegExp(`^W${weekNumber}\\b`, "i").test(name)) return name;
+  return `W${weekNumber} ${name}`;
+}
+
 export function buildGarminWorkout(
   plan: TrainingPlan,
-  workout: Workout
+  workout: Workout,
+  weekNumber?: number
 ): Record<string, unknown> | null {
   const sport = GARMIN_SPORT[workout.sport];
   if (!sport) return null;
@@ -281,7 +291,7 @@ export function buildGarminWorkout(
     : simpleSteps(plan, workout, order);
 
   return {
-    workoutName: workout.name,
+    workoutName: withWeekPrefix(workout.name, weekNumber),
     sportType: sport,
     estimatedDurationInSecs: Math.round((workout.durationMinutes || 60) * 60),
     workoutSegments: [

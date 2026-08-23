@@ -10,7 +10,7 @@ function findWorkoutWithDate(plan: TrainingPlan, workoutId: string) {
   for (const week of plan.weeks ?? []) {
     for (const day of week.days ?? []) {
       const workout = (day.workouts ?? []).find((w) => w.id === workoutId);
-      if (workout) return { workout, date: day.date };
+      if (workout) return { workout, date: day.date, weekNumber: week.weekNumber };
     }
   }
   return null;
@@ -32,7 +32,7 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
     throw error(409, "Compte Garmin non connecte. Connecte-le dans les Settings.");
   }
 
-  const payload = buildGarminWorkout(plan, found.workout);
+  const payload = buildGarminWorkout(plan, found.workout, found.weekNumber);
   if (!payload) throw error(400, "Impossible de construire la seance Garmin.");
 
   const body = await request.json().catch(() => ({}));
