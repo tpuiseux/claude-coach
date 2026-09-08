@@ -8,7 +8,7 @@ Workouts can be exported as simple calendar events (.ics), Zwift (.zwo), Garmin 
 
 ## Examples
 
-See example training plans at [felixrieseberg.github.io/claude-coach](https://felixrieseberg.github.io/claude-coach/#demos).
+See example training plans at [felixrieseberg.github.io/claude-coach](https://felixrieseberg.github.io/claude-coach/#demos) (demo gallery from the upstream project this fork is based on).
 
 ## Installation & Creating a training plan
 
@@ -18,7 +18,7 @@ Syncing your Garmin activity history and creating a tailored training plan takes
 
 ### Installing the Skill
 
-First, [download the latest skill from GitHub Releases](https://github.com/felixrieseberg/claude-coach/releases/latest/download/coach-skill.zip).
+First, [download the latest skill from GitHub Releases](https://github.com/tpuiseux/claude-coach/releases/latest/download/coach-skill.zip).
 
 **Claude.ai:**
 
@@ -162,5 +162,7 @@ If the web app runs in Docker and the bridge runs directly on the host (as above
 Each connected athlete gets their own Garmin session token, stored server-side under `~/.garmin-tokens-multiuser/` by default (configurable via `--multiuser-tokenstore-dir`) - never their password, which is only used once, in-memory, to establish that session.
 
 # About
+
+This is [tpuiseux/claude-coach](https://github.com/tpuiseux/claude-coach), a fork of [felixrieseberg/claude-coach](https://github.com/felixrieseberg/claude-coach) extended with Garmin Connect integration (activity + wellness sync, pushing workouts back to a watch), the companion `weekly-review` skill, road-race periodization for 5K/10K/half/marathon events, and the self-hosted multi-user web app described above.
 
 Claude Coach is an independent, open-source project and is not made by, endorsed by, or affiliated with Anthropic, PBC. "Claude" is a trademark of Anthropic. This tool is a skill/plugin that works with Claude products but is developed and maintained independently. License: MIT.
