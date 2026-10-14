@@ -87,6 +87,18 @@ def login_with_credentials(email: str, password: str) -> tuple[Garmin, str | Non
     succeeds otherwise), since garminconnect's own dump-after-login logic is
     skipped in this return_on_mfa mode.
     """
+    # Garmin.login() with no tokenstore silently falls back to $GARMINTOKENS:
+    # it would load that (single, legacy) account's saved session, skip
+    # these credentials entirely, and hand this user someone else's Garmin
+    # account - or fail with a misleading auth error once those tokens
+    # expire. Refuse rather than risk it; garmin_bridge.py clears the
+    # variable at startup.
+    if os.getenv("GARMINTOKENS"):
+        raise RuntimeError(
+            "GARMINTOKENS is set: Garmin.login() would use that account's saved "
+            "session instead of these credentials. Unset it before calling "
+            "login_with_credentials()."
+        )
     garmin = Garmin(email=email, password=password, return_on_mfa=True)
     mfa_status, _ = garmin.login()
     return garmin, mfa_status

@@ -541,6 +541,13 @@ def main() -> None:
     )
     args = parser.parse_args()
 
+    # $GARMINTOKENS only ever means the legacy account's tokenstore, and it's
+    # now captured in args.tokenstore. Drop it from the environment so
+    # garminconnect can't fall back to it on its own - a multi-tenant login
+    # (login_with_credentials) would otherwise load the legacy account's
+    # session instead of the credentials the user just typed.
+    os.environ.pop("GARMINTOKENS", None)
+
     token = os.getenv("GARMIN_BRIDGE_TOKEN", "")
     if args.host != "127.0.0.1" and not token:
         print(
