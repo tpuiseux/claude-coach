@@ -229,6 +229,8 @@ export interface PaceZones {
     name: string;
     pace: string;
     paceSeconds: number;
+    low?: string; // slower bound, e.g. "5:55/km" - the Garmin export's target range
+    high?: string; // faster bound
   }[];
 }
 

@@ -28,6 +28,15 @@ export interface PaceZone {
   name: string;
   pace: string;
   offset?: number;
+  // Run pace zones only: the plan's precise range (low = slower bound,
+  // e.g. "5:55/km"), which the Garmin export uses as the workout target.
+  // Settings only edits the single `pace` value, so boundsPace records the
+  // pace these bounds were defined around - buildZonesFromSettings rescales
+  // them by pace/boundsPace, keeping them in step with any edit or
+  // recalculation instead of either going stale or being dropped.
+  low?: string;
+  high?: string;
+  boundsPace?: string;
 }
 
 export type Theme = "dark" | "light";
@@ -142,6 +151,7 @@ export function deriveSettingsFromPlan(plan: TrainingPlan): Settings {
         zone: z.zone,
         name: z.name,
         pace: z.pace,
+        ...(z.low && z.high ? { low: z.low, high: z.high, boundsPace: z.pace } : {}),
       }));
     }
   }
@@ -252,6 +262,29 @@ export function recalculateRunPaceZones(thresholdPace: string): PaceZone[] {
   }));
 }
 
+/**
+ * Applies a recalculateRunPaceZones result onto the current zone list:
+ * recalculated zones replace their namesakes but keep those zones' plan
+ * bounds (low/high/boundsPace, rescaled later by buildZonesFromSettings),
+ * and zones the recalculation doesn't cover (Race Pace, or anything else a
+ * plan defines) are kept as-is rather than dropped.
+ */
+export function mergeRecalculatedRunPaceZones(
+  current: PaceZone[],
+  recalculated: PaceZone[]
+): PaceZone[] {
+  const currentByCode = new Map(current.map((z) => [String(z.zone), z]));
+  const recalculatedCodes = new Set(recalculated.map((z) => String(z.zone)));
+
+  const refreshed = recalculated.map((z) => {
+    const previous = currentByCode.get(String(z.zone));
+    if (!previous?.low || !previous.high || !previous.boundsPace) return z;
+    return { ...z, low: previous.low, high: previous.high, boundsPace: previous.boundsPace };
+  });
+  const preserved = current.filter((z) => !recalculatedCodes.has(String(z.zone)));
+  return [...refreshed, ...preserved];
+}
+
 export function recalculateSwimPaceZones(css: string): PaceZone[] {
   const cssSeconds = paceToSeconds(css);
   const offsets = [
@@ -267,6 +300,24 @@ export function recalculateSwimPaceZones(css: string): PaceZone[] {
     offset: z.offset,
     pace: secondsToPace(cssSeconds + z.offset),
   }));
+}
+
+/** Scales a pace string like "5:55/km" by `ratio`, keeping its unit suffix. */
+function scalePace(pace: string, ratio: number): string {
+  const suffix = pace.match(/\/.*$/)?.[0] ?? "";
+  return secondsToPace(Math.round(paceToSeconds(pace) * ratio)) + suffix;
+}
+
+/** The zone's plan bounds, rescaled to its current pace - or none, if the
+ * zone never had bounds (the Garmin export then falls back to a band
+ * around `pace`). */
+function runPaceBounds(zone: PaceZone): { low: string; high: string } | Record<string, never> {
+  if (!zone.low || !zone.high || !zone.boundsPace) return {};
+  const from = paceToSeconds(zone.boundsPace);
+  const to = paceToSeconds(zone.pace);
+  if (!(from > 0) || !(to > 0)) return {};
+  if (from === to) return { low: zone.low, high: zone.high };
+  return { low: scalePace(zone.low, to / from), high: scalePace(zone.high, to / from) };
 }
 
 function percentOf(value: number, base: number): number {
@@ -303,6 +354,7 @@ export function buildZonesFromSettings(settings: Settings): AthleteZones {
           name: z.name,
           pace: z.pace,
           paceSeconds: paceToSeconds(z.pace),
+          ...runPaceBounds(z),
         })),
       },
     },

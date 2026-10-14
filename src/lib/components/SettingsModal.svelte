@@ -7,6 +7,7 @@
     recalculateHrZones,
     recalculatePowerZones,
     recalculateRunPaceZones,
+    mergeRecalculatedRunPaceZones,
     recalculateSwimPaceZones,
   } from "../settings.js";
 
@@ -55,15 +56,10 @@
   }
 
   function recalcRunPace() {
-    const recalculated = recalculateRunPaceZones(localSettings.run.thresholdPace);
-    const recalculatedCodes = new Set(recalculated.map((z) => String(z.zone)));
-    // Merge rather than replace - keeps zones recalculateRunPaceZones doesn't
-    // cover (Race Pace, or anything else a plan defines) instead of dropping
-    // them, while still refreshing every zone it does compute.
-    const preserved = localSettings.run.paceZones.filter(
-      (z: { zone: string | number }) => !recalculatedCodes.has(String(z.zone))
+    localSettings.run.paceZones = mergeRecalculatedRunPaceZones(
+      localSettings.run.paceZones,
+      recalculateRunPaceZones(localSettings.run.thresholdPace)
     );
-    localSettings.run.paceZones = [...recalculated, ...preserved];
     save();
   }
 

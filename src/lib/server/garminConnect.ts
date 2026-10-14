@@ -99,9 +99,7 @@ interface SpeedRange {
 function findPlanPaceZoneSpeedRange(plan: TrainingPlan, description?: string): SpeedRange | null {
   if (!description) return null;
   const zones = plan.zones?.run?.pace?.zones ?? [];
-  const match = zones.find((z) => z.zone === description || z.name === description) as
-    | ((typeof zones)[number] & { low?: string; high?: string })
-    | undefined;
+  const match = zones.find((z) => z.zone === description || z.name === description);
   if (!match) return null;
 
   if (match.low && match.high) {
