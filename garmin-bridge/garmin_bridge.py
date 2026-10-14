@@ -65,6 +65,23 @@ def is_valid_user_id(value: str) -> bool:
     return value.isdigit() and value != "0"
 
 
+def log_garmin_error(context: str, user_id: str, err: Exception) -> None:
+    """Writes the library's real error to stderr (unbuffered, so it reaches
+    journald right away - stdout is block-buffered under systemd).
+
+    The user only ever sees a short French message, and garminconnect files
+    many unrelated failures (rate limits, Cloudflare blocks, SSO changes)
+    under GarminConnectAuthenticationError - this is the only place the
+    actual cause gets recorded.
+    """
+    chain = []
+    cur: BaseException | None = err
+    while cur is not None and len(chain) < 4:
+        chain.append(f"{type(cur).__name__}: {str(cur)[:300]}")
+        cur = cur.__cause__ or cur.__context__
+    print(f"[garmin-bridge] {context} user={user_id} failed: " + " <- ".join(chain), file=sys.stderr)
+
+
 def tokenstore_path_for(user_id: str, multiuser_dir: Path) -> str:
     return str(multiuser_dir / f"{user_id}.json")
 
@@ -303,13 +320,16 @@ def make_handler(api, dry_run, token, allowed_origins, multiuser_dir: Path):
 
             try:
                 garmin, mfa_status = login_with_credentials(email, password)
-            except GarminConnectAuthenticationError:
+            except GarminConnectAuthenticationError as e:
+                log_garmin_error("login", user_id, e)
                 self._json(401, {"error": "Identifiants Garmin incorrects."})
                 return
-            except GarminConnectTooManyRequestsError:
+            except GarminConnectTooManyRequestsError as e:
+                log_garmin_error("login", user_id, e)
                 self._json(429, {"error": "Trop de tentatives - reessaie plus tard."})
                 return
             except GarminConnectConnectionError as e:
+                log_garmin_error("login", user_id, e)
                 self._json(502, {"error": f"Connexion a Garmin impossible: {e}"})
                 return
 
@@ -357,13 +377,16 @@ def make_handler(api, dry_run, token, allowed_origins, multiuser_dir: Path):
             garmin, _ = pending
             try:
                 resume_mfa(garmin, code)
-            except GarminConnectAuthenticationError:
+            except GarminConnectAuthenticationError as e:
+                log_garmin_error("mfa", user_id, e)
                 self._json(401, {"error": "Code incorrect - recommence la connexion."})
                 return
-            except GarminConnectTooManyRequestsError:
+            except GarminConnectTooManyRequestsError as e:
+                log_garmin_error("mfa", user_id, e)
                 self._json(429, {"error": "Trop de tentatives - reessaie plus tard."})
                 return
             except GarminConnectConnectionError as e:
+                log_garmin_error("mfa", user_id, e)
                 self._json(502, {"error": f"Connexion a Garmin impossible: {e}"})
                 return
 
