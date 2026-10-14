@@ -249,6 +249,13 @@ def make_handler(api, dry_run, token, allowed_origins, multiuser_dir: Path):
                 )
                 return
 
+            if api is None:
+                self._json(
+                    503,
+                    {"error": "Compte Garmin legacy non connecte - relance le bridge en interactif."},
+                )
+                return
+
             try:
                 with legacy_api_lock:
                     result = api.upload_workout(workout_json)
@@ -455,6 +462,29 @@ def make_handler(api, dry_run, token, allowed_origins, multiuser_dir: Path):
     return Handler
 
 
+def load_legacy_api(tokenstore: str):
+    """The legacy single-account session, or None if it can't be had.
+
+    Under systemd there's no terminal, so init_api's interactive login
+    fallback would crash on input() - and take the multi-tenant /garmin/*
+    routes down with it, though they never use this account. So: prompt
+    only when a human is attached; otherwise start without the legacy
+    account and let /push-workout answer 503 until it's reconnected.
+    """
+    if sys.stdin.isatty():
+        return init_api(tokenstore)
+    try:
+        return login_from_tokenstore(tokenstore)
+    except Exception as e:  # any failure here must not stop the multi-tenant routes
+        print(
+            f"Compte legacy indisponible ({tokenstore}): {e}\n"
+            "/push-workout desactive ; les routes /garmin/* restent actives. "
+            "Pour le reconnecter : lance le bridge une fois en interactif.",
+            file=sys.stderr,
+        )
+        return None
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--host", default=DEFAULT_HOST, help=f"Bind address (default: {DEFAULT_HOST})")
@@ -498,7 +528,7 @@ def main() -> None:
         )
         sys.exit(1)
 
-    api = None if args.dry_run else init_api(args.tokenstore)
+    api = None if args.dry_run else load_legacy_api(args.tokenstore)
 
     multiuser_dir = Path(args.multiuser_tokenstore_dir).expanduser()
     multiuser_dir.mkdir(parents=True, exist_ok=True)
