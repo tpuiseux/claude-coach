@@ -114,6 +114,13 @@ services:
       - CLAUDE_COACH_DB_PATH=/data/coach.db
       - ORIGIN=https://your-domain.example
       - PORT=3000
+      # Behind a reverse proxy, tell the app where the real client IP is -
+      # otherwise every request looks like it comes from the proxy, and the
+      # login throttle's per-IP limit (20 failures / 15 min) applies to all
+      # users at once. Only set these if the proxy sets X-Forwarded-For
+      # (nginx: proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;).
+      # - ADDRESS_HEADER=X-Forwarded-For
+      # - XFF_DEPTH=1
     volumes:
       - ./data:/data
 ```

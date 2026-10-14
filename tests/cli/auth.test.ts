@@ -78,6 +78,24 @@ describe("Auth", () => {
       expect(verifyLogin("login@example.com", "wrong-password")).toBeNull();
       expect(verifyLogin("nobody@example.com", "correct-password")).toBeNull();
     });
+
+    it("spends a scrypt on unknown emails too, so timing doesn't reveal which exist", async () => {
+      const { createUser, verifyLogin } = await import("../../src/auth/users.js");
+      createUser("timing@example.com", "correct-password");
+      verifyLogin("nobody@example.com", "warm-up"); // first call also builds the dummy hash
+
+      const time = (email: string) => {
+        const start = performance.now();
+        for (let i = 0; i < 5; i++) verifyLogin(email, "wrong-password");
+        return performance.now() - start;
+      };
+      const known = time("timing@example.com");
+      const unknown = time("nobody@example.com");
+
+      // Without the dummy hash, the unknown path is ~1000x faster (a single
+      // SELECT); with it, both do one scrypt. Loose bound to stay unflaky.
+      expect(unknown).toBeGreaterThan(known * 0.5);
+    });
   });
 
   describe("sessions", () => {

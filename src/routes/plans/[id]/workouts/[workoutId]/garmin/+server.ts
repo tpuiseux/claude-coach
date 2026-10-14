@@ -4,6 +4,7 @@ import { loadPlanForUser } from "$lib/server/plans.js";
 import { isGarminConnected } from "$lib/server/garminCredentials.js";
 import { buildGarminWorkout, isGarminConnectSupported } from "$lib/server/garminConnect.js";
 import { pushWorkoutToGarminBridge } from "$lib/server/garminBridge.js";
+import { isIsoDate } from "$lib/server/validation.js";
 import type { TrainingPlan } from "../../../../../../schema/training-plan.js";
 
 function findWorkoutWithDate(plan: TrainingPlan, workoutId: string) {
@@ -35,8 +36,14 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
   const payload = buildGarminWorkout(plan, found.workout, found.weekNumber);
   if (!payload) throw error(400, "Impossible de construire la seance Garmin.");
 
+  // An empty/missing body is normal (schedule on the workout's own day);
+  // a date that's present but malformed is a client bug worth a 400 rather
+  // than forwarding it to Garmin's scheduling API.
   const body = await request.json().catch(() => ({}));
-  const scheduleDate = typeof body?.date === "string" ? body.date : found.date;
+  if (body?.date !== undefined && !isIsoDate(body.date)) {
+    throw error(400, "date must be a YYYY-MM-DD string");
+  }
+  const scheduleDate: string = body?.date ?? found.date;
 
   const result = await pushWorkoutToGarminBridge(userId, payload, scheduleDate);
   if (!result.ok) throw error(result.status, result.message);

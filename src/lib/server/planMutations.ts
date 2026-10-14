@@ -70,7 +70,11 @@ export function editWorkout(
   const found = findWorkout(plan, workoutId);
   if (!found) throw new WorkoutNotFoundError(workoutId);
 
-  Object.assign(found.workout, updates);
+  // Routes validate updates with parseWorkoutUpdates first (validation.ts);
+  // identity fields are dropped here too, so no caller can ever repoint a
+  // workout's id (duplicates break findWorkout) or bypass toggle-complete.
+  const { id: _id, completed: _completed, ...safeUpdates } = updates;
+  Object.assign(found.workout, safeUpdates);
   plan.meta.updatedAt = new Date().toISOString();
   return plan;
 }

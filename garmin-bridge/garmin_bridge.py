@@ -25,8 +25,9 @@ import hmac
 import json
 import os
 import sys
+import threading
 import time
-from http.server import BaseHTTPRequestHandler, HTTPServer
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 from garmin_lib import (
@@ -51,6 +52,14 @@ DEFAULT_PORT = 8420
 # hold a half-authenticated Garmin session in memory forever.
 PENDING_LOGIN_TTL_SECONDS = 10 * 60
 
+# Workout payloads are a few KB - anything near this is garbage or abuse,
+# and reading it would mean buffering it all in memory first.
+MAX_BODY_BYTES = 1024 * 1024
+
+# Per-connection socket timeout, so a client that announces a body and then
+# never sends it ties up one worker thread for this long, not forever.
+SOCKET_TIMEOUT_SECONDS = 30
+
 
 def is_valid_user_id(value: str) -> bool:
     return value.isdigit() and value != "0"
@@ -61,15 +70,31 @@ def tokenstore_path_for(user_id: str, multiuser_dir: Path) -> str:
 
 
 def make_handler(api, dry_run, token, allowed_origins, multiuser_dir: Path):
-    # userId -> (Garmin instance mid-MFA, started_at). Only ever touched from
-    # this single-threaded HTTPServer's request handling, so no lock needed.
+    # userId -> (Garmin instance mid-MFA, started_at). Requests are handled on
+    # concurrent threads (ThreadingHTTPServer), so every access goes through
+    # pending_lock.
     pending_logins: dict[str, tuple[object, float]] = {}
+    pending_lock = threading.Lock()
+
+    # The legacy single-account `api` is one shared Garmin client - not known
+    # to be thread-safe, so legacy pushes are serialized. Multi-tenant routes
+    # build their own per-request client and don't need this.
+    legacy_api_lock = threading.Lock()
 
     def sweep_pending_logins() -> None:
         cutoff = time.time() - PENDING_LOGIN_TTL_SECONDS
-        expired = [uid for uid, (_, started) in pending_logins.items() if started < cutoff]
-        for uid in expired:
-            del pending_logins[uid]
+        with pending_lock:
+            expired = [uid for uid, (_, started) in pending_logins.items() if started < cutoff]
+            for uid in expired:
+                del pending_logins[uid]
+
+    def set_pending_login(user_id: str, garmin: object) -> None:
+        with pending_lock:
+            pending_logins[user_id] = (garmin, time.time())
+
+    def pop_pending_login(user_id: str):
+        with pending_lock:
+            return pending_logins.pop(user_id, None)
 
     def is_authorized(headers) -> bool:
         if not token:
@@ -79,6 +104,8 @@ def make_handler(api, dry_run, token, allowed_origins, multiuser_dir: Path):
         return hmac.compare_digest(provided, token)
 
     class Handler(BaseHTTPRequestHandler):
+        timeout = SOCKET_TIMEOUT_SECONDS
+
         def _cors(self) -> None:
             # Reflect back the request's own Origin if it's on the allowlist, rather
             # than always sending one fixed value - a browser only accepts a response
@@ -105,7 +132,12 @@ def make_handler(api, dry_run, token, allowed_origins, multiuser_dir: Path):
             self.wfile.write(body)
 
         def _read_json_body(self) -> dict | None:
-            length = int(self.headers.get("Content-Length", 0))
+            try:
+                length = int(self.headers.get("Content-Length", 0))
+            except ValueError:
+                return None
+            if length < 0 or length > MAX_BODY_BYTES:
+                return None
             raw = self.rfile.read(length) if length else b"{}"
             try:
                 body = json.loads(raw or b"{}")
@@ -113,12 +145,47 @@ def make_handler(api, dry_run, token, allowed_origins, multiuser_dir: Path):
                 return None
             return body if isinstance(body, dict) else None
 
+        def _reject_cross_site(self) -> bool:
+            """Blocks requests a web page could forge from a visitor's browser.
+
+            CORS only stops a page from *reading* the response - a cross-site
+            POST still reaches the handler and runs. Without a token (the
+            default for a local bridge), that would let any site the user
+            visits push workouts or disconnect accounts. Two checks close it:
+            requiring application/json forces a CORS preflight (which fails
+            for disallowed origins, so the real request is never sent), and
+            the Origin check catches anything that slips through (including
+            DNS-rebinding pages, whose Origin is the attacker's hostname).
+
+            The /garmin/* routes are server-to-server only - Node's fetch sends
+            no Origin, so any Origin at all there means a browser.
+
+            Sends the error response and returns True if the request must stop.
+            """
+            origin = self.headers.get("Origin")
+            if origin is not None:
+                server_only = self.path.startswith("/garmin/")
+                if server_only or origin not in allowed_origins:
+                    self._json(403, {"error": "origin not allowed"})
+                    return True
+
+            if self.command == "POST":
+                content_type = self.headers.get("Content-Type", "")
+                if content_type.split(";", 1)[0].strip().lower() != "application/json":
+                    self._json(415, {"error": "Content-Type must be application/json"})
+                    return True
+
+            return False
+
         def do_OPTIONS(self) -> None:
             self.send_response(204)
             self._cors()
             self.end_headers()
 
         def do_GET(self) -> None:
+            if self._reject_cross_site():
+                return
+
             if self.path == "/health":
                 self._json(200, {"status": "ok", "dryRun": dry_run, "authRequired": bool(token)})
                 return
@@ -130,6 +197,9 @@ def make_handler(api, dry_run, token, allowed_origins, multiuser_dir: Path):
             self._json(404, {"error": "not found"})
 
         def do_POST(self) -> None:
+            if self._reject_cross_site():
+                return
+
             if self.path == "/push-workout":
                 self._handle_legacy_push_workout()
                 return
@@ -180,10 +250,11 @@ def make_handler(api, dry_run, token, allowed_origins, multiuser_dir: Path):
                 return
 
             try:
-                result = api.upload_workout(workout_json)
-                workout_id = result["workoutId"]
-                if date:
-                    api.schedule_workout(workout_id, date)
+                with legacy_api_lock:
+                    result = api.upload_workout(workout_json)
+                    workout_id = result["workoutId"]
+                    if date:
+                        api.schedule_workout(workout_id, date)
                 self._json(200, {"workoutId": workout_id, "scheduled": bool(date), "date": date})
             except Exception as e:  # surfaced as a message in the button's UI
                 self._json(502, {"error": str(e)})
@@ -211,7 +282,7 @@ def make_handler(api, dry_run, token, allowed_origins, multiuser_dir: Path):
 
             if dry_run:
                 if password == "mfa":
-                    pending_logins[user_id] = ("dry-run", time.time())
+                    set_pending_login(user_id, "dry-run")
                     self._json(200, {"ok": True, "mfaRequired": True})
                 else:
                     Path(tokenstore_path_for(user_id, multiuser_dir)).parent.mkdir(
@@ -236,7 +307,7 @@ def make_handler(api, dry_run, token, allowed_origins, multiuser_dir: Path):
                 return
 
             if mfa_status:
-                pending_logins[user_id] = (garmin, time.time())
+                set_pending_login(user_id, garmin)
                 self._json(200, {"ok": True, "mfaRequired": True})
                 return
 
@@ -261,7 +332,7 @@ def make_handler(api, dry_run, token, allowed_origins, multiuser_dir: Path):
 
             sweep_pending_logins()
 
-            pending = pending_logins.pop(user_id, None)
+            pending = pop_pending_login(user_id)
             if pending is None:
                 self._json(400, {"error": "Pas de connexion en attente - recommence."})
                 return
@@ -322,7 +393,7 @@ def make_handler(api, dry_run, token, allowed_origins, multiuser_dir: Path):
                 self._json(400, {"error": "userId is required"})
                 return
 
-            pending_logins.pop(user_id, None)
+            pop_pending_login(user_id)
             Path(tokenstore_path_for(user_id, multiuser_dir)).unlink(missing_ok=True)
             self._json(200, {"ok": True})
 
@@ -434,7 +505,8 @@ def main() -> None:
 
     allowed_origins = {o.strip() for o in args.allowed_origin.split(",") if o.strip()}
     handler = make_handler(api, args.dry_run, token, allowed_origins, multiuser_dir)
-    server = HTTPServer((args.host, args.port), handler)
+    server = ThreadingHTTPServer((args.host, args.port), handler)
+    server.daemon_threads = True
     mode = "DRY-RUN (aucun envoi reel a Garmin)" if args.dry_run else "connecte a Garmin"
     auth_state = "jeton requis" if token else "AUCUNE AUTH (local uniquement)"
     print(f"Garmin bridge en ecoute sur http://{args.host}:{args.port} [{mode}, {auth_state}]")
