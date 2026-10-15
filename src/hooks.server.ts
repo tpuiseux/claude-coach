@@ -23,7 +23,9 @@ function ensureDb(): Promise<void> {
 // event.url.pathname includes `base` (nginx passes the full path through
 // unchanged, matching how paths.base is configured - see svelte.config.js),
 // so comparisons/redirects here need `base` prepended too.
-const PUBLIC_ROUTES = new Set([`${base}/login`]);
+// /signup answers 404 itself when SIGNUP_INVITE_CODE is unset (see
+// routes/signup/+page.server.ts), so listing it here opens nothing by default.
+const PUBLIC_ROUTES = new Set([`${base}/login`, `${base}/signup`]);
 
 export const handle: Handle = async ({ event, resolve }) => {
   await ensureDb();

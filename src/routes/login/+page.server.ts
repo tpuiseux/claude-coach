@@ -1,11 +1,14 @@
 import { fail, redirect } from "@sveltejs/kit";
-import { dev } from "$app/environment";
 import { base } from "$app/paths";
-import type { Actions } from "./$types";
+import type { Actions, PageServerLoad } from "./$types";
 import { verifyLogin } from "../../auth/users.js";
-import { createSession } from "../../auth/session.js";
 import { loginBlockedFor, recordLoginFailure, recordLoginSuccess } from "../../auth/rateLimit.js";
-import { SESSION_COOKIE } from "../../hooks.server.js";
+import { isSignupOpen } from "../../auth/signup.js";
+import { startSession } from "$lib/server/sessionCookie.js";
+
+export const load: PageServerLoad = async () => {
+  return { signupOpen: isSignupOpen() };
+};
 
 export const actions: Actions = {
   default: async ({ request, cookies, getClientAddress }) => {
@@ -37,15 +40,7 @@ export const actions: Actions = {
     }
     recordLoginSuccess(email);
 
-    const sessionId = createSession(user.id);
-    cookies.set(SESSION_COOKIE, sessionId, {
-      path: "/",
-      httpOnly: true,
-      secure: !dev,
-      sameSite: "lax",
-      maxAge: 60 * 60 * 24 * 30, // matches SESSION_TTL_MS in auth/session.ts
-    });
-
+    startSession(cookies, user.id);
     throw redirect(302, `${base}/`);
   },
 };

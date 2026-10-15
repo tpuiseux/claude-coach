@@ -2,7 +2,10 @@ import { describe, it, expect, beforeEach } from "vitest";
 import {
   MAX_FAILURES_PER_EMAIL,
   MAX_FAILURES_PER_IP,
+  MAX_SIGNUP_ATTEMPTS_PER_IP,
   loginBlockedFor,
+  recordSignupAttempt,
+  signupBlockedFor,
   recordLoginFailure,
   recordLoginSuccess,
   resetLoginThrottle,
@@ -36,6 +39,16 @@ describe("login throttle", () => {
     for (let i = 0; i < MAX_FAILURES_PER_EMAIL; i++) recordLoginFailure("a@x.fr", "1.1.1.1", now);
     expect(loginBlockedFor("a@x.fr", "1.1.1.1", now)).toBeGreaterThan(0);
     expect(loginBlockedFor("a@x.fr", "1.1.1.1", now + 15 * 60 * 1000 + 1)).toBeNull();
+  });
+
+  it("caps signup attempts per IP, independently of login", () => {
+    for (let i = 0; i < MAX_SIGNUP_ATTEMPTS_PER_IP; i++) {
+      expect(signupBlockedFor("9.9.9.9")).toBeNull();
+      recordSignupAttempt("9.9.9.9");
+    }
+    expect(signupBlockedFor("9.9.9.9")).toBeGreaterThan(0);
+    expect(signupBlockedFor("8.8.8.8")).toBeNull();
+    expect(loginBlockedFor("a@x.fr", "9.9.9.9")).toBeNull();
   });
 
   it("a successful login resets the account's count, not the IP's", () => {

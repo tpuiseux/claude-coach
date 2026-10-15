@@ -1,12 +1,14 @@
 <script lang="ts">
   import { enhance } from "$app/forms";
-  import type { ActionData } from "./$types";
+  import { base } from "$app/paths";
+  import type { ActionData, PageData } from "./$types";
 
   interface Props {
+    data: PageData;
     form: ActionData;
   }
 
-  let { form }: Props = $props();
+  let { data, form }: Props = $props();
 </script>
 
 <svelte:head>
@@ -32,6 +34,10 @@
     </label>
 
     <button type="submit">Log in</button>
+
+    {#if data.signupOpen}
+      <p class="switch">No account yet? <a href="{base}/signup">Create one</a></p>
+    {/if}
   </form>
 </main>
 
@@ -92,6 +98,17 @@
     color: #0a0a0b;
     font-weight: 600;
     cursor: pointer;
+  }
+
+  .switch {
+    margin: 0;
+    text-align: center;
+    font-size: 0.85rem;
+    color: #a1a1aa;
+  }
+
+  .switch a {
+    color: #eab308;
   }
 
   .error {

@@ -1,7 +1,8 @@
 #!/usr/bin/env tsx
 /**
- * Admin-only account creation. There's no public signup for this platform -
- * accounts are created by whoever runs this script.
+ * Admin account creation, straight against the database. Athletes can also
+ * sign up themselves at /signup with the invite code (SIGNUP_INVITE_CODE) -
+ * this script is for when that's closed, or to skip it.
  *
  * Usage:
  *   npm run create-user -- --email you@example.com --name "Your Name"

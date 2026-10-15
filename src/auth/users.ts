@@ -11,8 +11,9 @@ export interface User {
 }
 
 /**
- * Creates a user account. There is no public signup - accounts are created
- * by an admin via `npm run create-user` (see scripts/create-user.ts).
+ * Creates a user account, with no validation beyond uniqueness - callers
+ * check their own inputs: the invite-gated signup form (auth/signup.ts) or
+ * an admin via `npm run create-user` (scripts/create-user.ts).
  */
 export function createUser(email: string, password: string, name?: string): User {
   const existing = findUserByEmail(email);
@@ -34,8 +35,11 @@ export function createUser(email: string, password: string, name?: string): User
   return user;
 }
 
+/** Case-insensitive: emails are typed by hand at signup and at every
+ * login, so "Marie@x.fr" and "marie@x.fr" must be the same account - for
+ * the duplicate check in createUser as much as for logging in. */
 export function findUserByEmail(email: string): User | undefined {
-  return get<User>("SELECT * FROM users WHERE email = ?", [email]);
+  return get<User>("SELECT * FROM users WHERE email = ? COLLATE NOCASE", [email]);
 }
 
 export function findUserById(id: number): User | undefined {

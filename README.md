@@ -131,6 +131,15 @@ docker compose up -d
 
 ### 2. Create an account
 
+Athletes can create their own account at `/signup`, gated by an invite code you hand out. Set it in the web app's environment (e.g. its `.env`) and restart the container:
+
+```
+SIGNUP_INVITE_CODE=<a code you choose>
+```
+
+With `SIGNUP_INVITE_CODE` unset, sign-ups are closed: `/signup` returns 404 and the login page shows no sign-up link. Change the code at any time to stop new sign-ups with the old one (existing accounts are unaffected). Attempts are capped at 10 per IP per 15 minutes.
+
+You can also create accounts yourself, with sign-ups open or not.
 The admin scripts need `devDependencies` (they're not in the production image), so run them from a local clone instead - pointed at the same database file your container's volume uses:
 
 ```bash
