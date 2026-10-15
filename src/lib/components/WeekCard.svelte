@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { TrainingWeek, TrainingDay, Workout } from "../../schema/training-plan.js";
-  import type { RecordedActivity, WorkoutFeedback } from "../trainingLog.js";
+  import { matchDay, type RecordedActivity, type WorkoutFeedback } from "../trainingLog.js";
   import type { Settings } from "../settings.js";
   import WorkoutCard from "./WorkoutCard.svelte";
   import { formatActivitySummary, parseDate } from "../utils.js";
@@ -69,6 +69,9 @@
       {@const isToday = day.date === today}
       {@const filteredWorkouts = (day.workouts ?? []).filter(filterWorkout)}
       {@const isDragOver = dragOverDate === day.date}
+      <!-- Matched against all of the day's workouts, not just the filtered
+           ones, so a filter never turns a matched activity into "unplanned". -->
+      {@const recorded = matchDay(day.workouts ?? [], activitiesByDate[day.date] ?? [])}
 
       <div
         class="day-column"
@@ -98,6 +101,8 @@
                 {workout}
                 isCompleted={!!workout.completed}
                 feedback={feedback[workout.id]}
+                recorded={recorded.byWorkout[workout.id]}
+                {settings}
                 onClick={() => onWorkoutClick(workout, day)}
               />
             {/each}
@@ -105,9 +110,9 @@
             <div class="empty-day">Rest</div>
           {/if}
 
-          {#each activitiesByDate[day.date] ?? [] as activity (activity.id)}
+          {#each recorded.unplanned as activity (activity.id)}
             <div class="recorded-activity" title={activity.name ?? ""}>
-              <span class="recorded-label">Garmin</span>
+              <span class="recorded-label">Not in plan</span>
               <span class="recorded-name">{activity.name ?? activity.sportType}</span>
               <span class="recorded-summary">{formatActivitySummary(activity, settings)}</span>
             </div>
@@ -273,7 +278,8 @@
     min-width: 0;
   }
 
-  /* What was actually recorded, under what was planned: quieter than a
+  /* A recorded activity that matched nothing planned that day (activities
+   * that did match show inside their workout's card). Quieter than a
    * workout card, so the plan stays the main thing on the page. */
   .recorded-activity {
     display: flex;

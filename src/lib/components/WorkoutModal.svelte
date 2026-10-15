@@ -44,7 +44,8 @@
     onMove: (workoutId: string, newDate: string) => void;
     planDateRange: { min: string; max: string };
     feedback?: WorkoutFeedback;
-    dayActivities: RecordedActivity[];
+    /** Garmin activities matched to this workout (see matchDay). */
+    recordedActivities: RecordedActivity[];
     /** Rejects with a user-facing message on failure. */
     onSaveFeedback: (workoutId: string, feedback: FeedbackDraft) => Promise<void>;
     onDeleteFeedback: (workoutId: string) => Promise<void>;
@@ -71,7 +72,7 @@
     onMove,
     planDateRange,
     feedback,
-    dayActivities,
+    recordedActivities,
     onSaveFeedback,
     onDeleteFeedback,
   }: Props = $props();
@@ -376,10 +377,10 @@
           </div>
         {/if}
 
-        {#if dayActivities.length > 0}
+        {#if recordedActivities.length > 0}
           <div class="modal-section">
-            <h4 class="modal-section-title">Recorded on Garmin that day</h4>
-            {#each dayActivities as activity (activity.id)}
+            <h4 class="modal-section-title">Recorded on Garmin</h4>
+            {#each recordedActivities as activity (activity.id)}
               <div class="recorded-row">
                 <span class="recorded-row-name">{activity.name ?? activity.sportType}</span>
                 <span class="recorded-row-summary">{formatActivitySummary(activity, settings)}</span

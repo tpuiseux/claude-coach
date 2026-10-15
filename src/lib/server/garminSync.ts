@@ -1,5 +1,6 @@
 import { all, execute, get, run } from "../../db/client.js";
 import { isGarminConnected } from "./garminCredentials.js";
+import { autoCompleteFromActivities } from "./autoComplete.js";
 import {
   fetchGarminActivities,
   fetchGarminWellness,
@@ -240,6 +241,13 @@ async function runSync(userId: number, previous: GarminSyncState | null): Promis
     const wellness = await fetchGarminWellness(userId, wellnessRange.start, wellnessRange.end);
     if (!wellness.ok) throw new Error(wellness.message);
     const wellnessCount = inTransaction(() => storeWellness(userId, wellness.data.days));
+
+    try {
+      autoCompleteFromActivities(userId);
+    } catch (err) {
+      // The data is stored either way; ticking workouts is a convenience.
+      console.error(`[garmin-sync] auto-complete failed for user ${userId}:`, err);
+    }
 
     run(
       `UPDATE garmin_sync_state SET status = 'success', finished_at = datetime('now'),

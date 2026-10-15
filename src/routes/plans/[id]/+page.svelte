@@ -16,6 +16,7 @@
   import WorkoutModal from "$lib/components/WorkoutModal.svelte";
   import SettingsModal from "$lib/components/SettingsModal.svelte";
   import { runSync } from "$lib/garminSyncClient.js";
+  import { matchDay } from "$lib/trainingLog.js";
 
   interface Props {
     data: PageData;
@@ -250,7 +251,10 @@
     onMove={handleMoveFromModal}
     {planDateRange}
     feedback={modalState.mode === "create" ? undefined : data.feedback[modalState.workout.id]}
-    dayActivities={data.activitiesByDate[modalState.day.date] ?? []}
+    recordedActivities={modalState.mode === "create"
+      ? []
+      : (matchDay(modalState.day.workouts ?? [], data.activitiesByDate[modalState.day.date] ?? [])
+          .byWorkout[modalState.workout.id] ?? [])}
     onSaveFeedback={handleSaveFeedback}
     onDeleteFeedback={handleDeleteFeedback}
   />

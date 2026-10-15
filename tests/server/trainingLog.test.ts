@@ -266,4 +266,117 @@ describe("training log (Garmin sync + workout feedback)", () => {
       expect(getFeedbackForPlan(alice, "plan-a")).toEqual({});
     });
   });
+
+  describe("auto-completion from matched activities", () => {
+    const planId = "auto-plan";
+    const plan = () => ({
+      meta: {
+        id: planId,
+        event: "Test 10K",
+        eventDate: "2026-05-31",
+        createdAt: "2026-05-01T00:00:00Z",
+        updatedAt: "2026-05-01T00:00:00Z",
+      },
+      weeks: [
+        {
+          weekNumber: 1,
+          days: [
+            {
+              date: "2026-05-04",
+              dayOfWeek: "Monday",
+              workouts: [
+                {
+                  id: "w-run",
+                  sport: "run",
+                  type: "endurance",
+                  name: "Easy",
+                  description: "",
+                  completed: false,
+                },
+                {
+                  id: "w-gym",
+                  sport: "strength",
+                  type: "endurance",
+                  name: "Gym",
+                  description: "",
+                  completed: false,
+                },
+              ],
+            },
+            {
+              date: "2026-05-05",
+              dayOfWeek: "Tuesday",
+              workouts: [
+                {
+                  id: "w-rest",
+                  sport: "rest",
+                  type: "rest",
+                  name: "Rest",
+                  description: "",
+                  completed: false,
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+
+    const completedIds = async () => {
+      const { loadPlanForUser } = await import("../../src/lib/server/plans.js");
+      return loadPlanForUser(planId, alice)!
+        .weeks.flatMap((w) => w.days)
+        .flatMap((d) => d.workouts)
+        .filter((w) => w.completed)
+        .map((w) => w.id);
+    };
+
+    beforeAll(async () => {
+      const { importPlanForUser } = await import("../../src/lib/server/plans.js");
+      const { run } = await import("../../src/db/client.js");
+      importPlanForUser(alice, plan() as never);
+      run(
+        `INSERT INTO activities (id, name, sport_type, start_date, start_date_local, user_id) VALUES
+           (8001, 'Morning run', 'Run', '2026-05-04T05:00:00Z', '2026-05-04T07:00:00', ?),
+           (8002, 'Rest-day ride', 'Ride', '2026-05-05T08:00:00Z', '2026-05-05T10:00:00', ?)`,
+        [alice, alice]
+      );
+    });
+
+    it("ticks the matched workout only", async () => {
+      const { autoCompleteFromActivities } = await import("../../src/lib/server/autoComplete.js");
+      expect(autoCompleteFromActivities(alice, [planId])).toBe(1);
+      // the run matched; no gym session recorded; the ride was on a rest day
+      expect(await completedIds()).toEqual(["w-run"]);
+    });
+
+    it("doesn't re-tick a workout the athlete unticked", async () => {
+      const { autoCompleteFromActivities } = await import("../../src/lib/server/autoComplete.js");
+      const { loadPlanForUser, savePlanForUser } = await import("../../src/lib/server/plans.js");
+      const { setWorkoutCompleted } = await import("../../src/lib/server/planMutations.js");
+
+      const p = loadPlanForUser(planId, alice)!;
+      setWorkoutCompleted(p, "w-run", false);
+      savePlanForUser(planId, alice, p);
+
+      expect(autoCompleteFromActivities(alice, [planId])).toBe(0);
+      expect(await completedIds()).toEqual([]);
+    });
+
+    it("starts over after a re-import", async () => {
+      const { autoCompleteFromActivities, resetAutoCompletions } =
+        await import("../../src/lib/server/autoComplete.js");
+      resetAutoCompletions(alice, planId);
+      expect(autoCompleteFromActivities(alice, [planId])).toBe(1);
+      expect(await completedIds()).toEqual(["w-run"]);
+    });
+
+    it("only ever touches the user's own plans", async () => {
+      const { autoCompleteFromActivities } = await import("../../src/lib/server/autoComplete.js");
+      // Bob has no plans, and can't reach Alice's by id.
+      expect(autoCompleteFromActivities(bob)).toBe(0);
+      expect(autoCompleteFromActivities(bob, [planId])).toBe(0);
+      expect(await completedIds()).toEqual(["w-run"]);
+    });
+  });
 });

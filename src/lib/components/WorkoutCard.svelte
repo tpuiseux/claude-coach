@@ -1,16 +1,20 @@
 <script lang="ts">
   import type { Workout } from "../../schema/training-plan.js";
-  import type { WorkoutFeedback } from "../trainingLog.js";
-  import { formatDuration } from "../utils.js";
+  import type { RecordedActivity, WorkoutFeedback } from "../trainingLog.js";
+  import type { Settings } from "../settings.js";
+  import { formatActivitySummary, formatDuration } from "../utils.js";
 
   interface Props {
     workout: Workout;
     isCompleted: boolean;
     feedback?: WorkoutFeedback;
+    /** Garmin activities matched to this workout (see matchDay). */
+    recorded?: RecordedActivity[];
+    settings: Settings;
     onClick: () => void;
   }
 
-  let { workout, isCompleted, feedback, onClick }: Props = $props();
+  let { workout, isCompleted, feedback, recorded, settings, onClick }: Props = $props();
 
   let isDragging = $state(false);
 
@@ -51,6 +55,12 @@
       {/if}
     </div>
   {/if}
+  {#each recorded ?? [] as activity (activity.id)}
+    <div class="workout-recorded" title="Recorded on Garmin: {activity.name ?? ''}">
+      <span class="recorded-check">✓</span>
+      {formatActivitySummary(activity, settings)}
+    </div>
+  {/each}
 </button>
 
 <style>
@@ -208,6 +218,21 @@
     border-radius: 4px;
     background: var(--bg-elevated);
     color: var(--text-secondary);
+  }
+
+  .workout-recorded {
+    margin-top: 0.35rem;
+    padding-top: 0.35rem;
+    border-top: 1px solid var(--border-subtle);
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+  }
+
+  .recorded-check {
+    color: var(--bike);
+    font-weight: 700;
+    margin-right: 0.2rem;
   }
 
   .feedback-badge.pain {

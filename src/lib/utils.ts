@@ -1,6 +1,6 @@
 import type { Settings } from "./settings.js";
 import type { Sport } from "../schema/training-plan.js";
-import type { RecordedActivity } from "./trainingLog.js";
+import { activitySport, type RecordedActivity } from "./trainingLog.js";
 
 const METERS_PER_YARD = 0.9144;
 const KM_PER_MILE = 1.60934;
@@ -145,24 +145,6 @@ export function getSportIcon(sport: Sport): string {
     rest: "\u{1F6CC}",
   };
   return icons[sport] || "";
-}
-
-// Recorded activities use Strava-style sport types (see SPORT_TYPE_MAP in
-// garmin-bridge/sync_activities.py); the plan uses its own Sport values.
-const ACTIVITY_SPORTS: Record<string, Sport> = {
-  Run: "run",
-  TrailRun: "run",
-  VirtualRun: "run",
-  Ride: "bike",
-  GravelRide: "bike",
-  MountainBikeRide: "bike",
-  VirtualRide: "bike",
-  Swim: "swim",
-  WeightTraining: "strength",
-};
-
-export function activitySport(sportType: string | null): Sport | null {
-  return (sportType && ACTIVITY_SPORTS[sportType]) || null;
 }
 
 /** "10.2km · 52m · 148 bpm" - whichever parts the activity has. */

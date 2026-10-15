@@ -205,6 +205,18 @@ CREATE TABLE IF NOT EXISTS daily_wellness (
   PRIMARY KEY (user_id, date)
 );
 
+-- Workouts already marked completed because a recorded activity matched
+-- them (lib/server/autoComplete.ts). Each is auto-completed at most once:
+-- if the athlete unticks it afterwards, the row keeps it unticked.
+CREATE TABLE IF NOT EXISTS workout_auto_completions (
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  plan_id TEXT NOT NULL,
+  workout_id TEXT NOT NULL,
+  activity_id INTEGER NOT NULL,     -- the activity that matched it
+  created_at TEXT DEFAULT (datetime('now')),
+  PRIMARY KEY (user_id, plan_id, workout_id)
+);
+
 -- How a workout actually felt, as reported by the athlete. Kept apart from
 -- the plan JSON on purpose: re-importing a plan replaces the whole JSON, and
 -- feedback must survive that. Keyed by the workout's id within its plan.

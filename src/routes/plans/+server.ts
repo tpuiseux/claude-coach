@@ -1,6 +1,7 @@
 import { error, json } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
 import { importPlanForUser, PlanOwnershipError } from "$lib/server/plans.js";
+import { autoCompleteFromActivities, resetAutoCompletions } from "$lib/server/autoComplete.js";
 import type { TrainingPlan } from "../../schema/training-plan.js";
 
 /**
@@ -48,6 +49,11 @@ export const POST: RequestHandler = async ({ request, locals }) => {
     if (err instanceof PlanOwnershipError) throw error(403, err.message);
     throw err;
   }
+
+  // Activities synced before this plan existed (or before this re-import)
+  // can tick its workouts right away, rather than at the next sync.
+  resetAutoCompletions(userId, plan.meta.id);
+  autoCompleteFromActivities(userId, [plan.meta.id]);
 
   return json({ ok: true, planId: plan.meta.id });
 };
