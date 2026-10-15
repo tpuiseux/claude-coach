@@ -85,7 +85,7 @@ Claude will use this information to create a plan tailored to your current fitne
 
 ## Self-Hosting the Web App (Optional)
 
-Instead of a static HTML file, you can run Claude Coach as a small multi-user web app: real accounts (email + password), plans stored in a server-side SQLite database, and a UI to import/edit them - useful if you're coaching a few people, or just want your own plan to survive clearing your browser. There's no public sign-up; accounts are created by whoever runs the server.
+Instead of a static HTML file, you can run Claude Coach as a small multi-user web app: real accounts (email + password), plans stored in a server-side SQLite database, and a UI to import/edit them - useful if you're coaching a few people, or just want your own plan to survive clearing your browser. Athletes sign up with an invite code you hand out (or you create their accounts yourself), and the app works on phones, where it can be installed on the home screen.
 
 This is optional and separate from the default skill workflow above - most people don't need it.
 
@@ -114,13 +114,17 @@ services:
       - CLAUDE_COACH_DB_PATH=/data/coach.db
       - ORIGIN=https://your-domain.example
       - PORT=3000
-      # Behind a reverse proxy, tell the app where the real client IP is -
-      # otherwise every request looks like it comes from the proxy, and the
-      # login throttle's per-IP limit (20 failures / 15 min) applies to all
-      # users at once. Only set these if the proxy sets X-Forwarded-For
-      # (nginx: proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;).
-      # - ADDRESS_HEADER=X-Forwarded-For
-      # - XFF_DEPTH=1
+      # Behind a reverse proxy, tell the app which header carries the real
+      # client IP - otherwise every request looks like it comes from the
+      # proxy, and the per-IP limits on login (20 failures / 15 min) and
+      # sign-up (10 attempts / 15 min) apply to all users at once. Use the
+      # header your proxy actually sets, and only that one (a client could
+      # forge any other):
+      #   nginx `proxy_set_header X-Real-IP $remote_addr;`
+      #     -> ADDRESS_HEADER=X-Real-IP
+      #   nginx `proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;`
+      #     -> ADDRESS_HEADER=X-Forwarded-For and XFF_DEPTH=1
+      # - ADDRESS_HEADER=X-Real-IP
     volumes:
       - ./data:/data
 ```
@@ -139,8 +143,7 @@ SIGNUP_INVITE_CODE=<a code you choose>
 
 With `SIGNUP_INVITE_CODE` unset, sign-ups are closed: `/signup` returns 404 and the login page shows no sign-up link. Change the code at any time to stop new sign-ups with the old one (existing accounts are unaffected). Attempts are capped at 10 per IP per 15 minutes.
 
-You can also create accounts yourself, with sign-ups open or not.
-The admin scripts need `devDependencies` (they're not in the production image), so run them from a local clone instead - pointed at the same database file your container's volume uses:
+You can also create accounts yourself, with sign-ups open or not. The admin scripts need `devDependencies` (they're not in the production image), so run them from a local clone instead - pointed at the same database file your container's volume uses:
 
 ```bash
 npm install
@@ -173,9 +176,53 @@ GARMIN_BRIDGE_URL=http://127.0.0.1:8420
 GARMIN_BRIDGE_TOKEN=<the same random secret>
 ```
 
-If the web app runs in Docker and the bridge runs directly on the host (as above), `127.0.0.1` inside the container won't reach it - use the host's address on the Docker bridge network instead (`http://172.17.0.1:8420` on Linux, or `http://host.docker.internal:8420` on Docker Desktop for Mac/Windows).
+If the web app runs in Docker and the bridge runs directly on the host (as above), `127.0.0.1` inside the container won't reach it - use the host's address on the Docker bridge network instead (`http://172.17.0.1:8420` on Linux, or `http://host.docker.internal:8420` on Docker Desktop for Mac/Windows). Binding the bridge to anything other than `127.0.0.1` requires `GARMIN_BRIDGE_TOKEN`; it refuses to start without one.
 
-Each connected athlete gets their own Garmin session token, stored server-side under `~/.garmin-tokens-multiuser/` by default (configurable via `--multiuser-tokenstore-dir`) - never their password, which is only used once, in-memory, to establish that session.
+Each connected athlete gets their own Garmin session token, stored server-side under `~/.garmin-tokens-multiuser/<user id>.json` by default (configurable via `--multiuser-tokenstore-dir`) - never their password, which is only used once, in-memory, to establish that session. The session refreshes itself and is saved back on each refresh, so athletes normally connect once.
+
+Under systemd (or anything else without a terminal), run the bridge with its output unbuffered or check `journalctl -u <service>`: when a connection fails, the athlete only sees a short message, and the actual Garmin error is written to the bridge's stderr.
+
+#### When Garmin blocks logins from your server
+
+Garmin's sign-in (behind Cloudflare) often rejects password logins from datacenter IPs - the bridge's log then shows `HTTP 403` / `429` errors ending in `All login strategies exhausted`, and the athlete sees "Connexion a Garmin impossible". Token refreshes from the same server keep working, so the workaround is to log in once from a residential connection and copy the session over:
+
+1. On your own computer (from a clone of this repo, with the bridge's venv installed as above), the athlete logs in - it prompts for their email, password and MFA code, and only talks to Garmin:
+
+   ```bash
+   cd garmin-bridge
+   ./venv/bin/python3 login_local.py --out ~/garmin-token.json
+   ```
+
+2. Copy the file to the server as that athlete's tokenstore, then delete the local copy:
+
+   ```bash
+   scp ~/garmin-token.json your-server:.garmin-tokens-multiuser/<user id>.json
+   ssh your-server chmod 600 .garmin-tokens-multiuser/<user id>.json
+   rm ~/garmin-token.json
+   ```
+
+3. Mark the account as connected in the web app's database (this is the row the "Connect" button writes on success):
+
+   ```bash
+   docker exec <web container> node -e "new (require('node:sqlite').DatabaseSync)('/data/coach.db').prepare(\"INSERT INTO garmin_credentials (user_id, tokenstore_path) VALUES (?, ?) ON CONFLICT(user_id) DO UPDATE SET connected_at = datetime('now')\").run(<user id>, 'multiuser:<user id>')"
+   ```
+
+The athlete's Garmin settings then show the account as connected, and "Send to Garmin" works as usual.
+
+#### The standalone HTML viewer's "Send to Garmin" button
+
+The static HTML plan (not the web app) can push workouts through the same bridge, from the browser, using a single Garmin account: the one whose session is saved at `--tokenstore` (default `$GARMINTOKENS`, else `~/.garminconnect`). Run the bridge once in a terminal to log that account in; if the session later expires, the bridge still starts (under systemd it can't prompt) and only that button stops working until you log in again the same way.
+
+Because this button calls the bridge from a browser, the bridge must be reachable from it, and the page's origin must be allowed: `--allowed-origin https://your-site.example,https://www.your-site.example` (or `GARMIN_BRIDGE_ALLOWED_ORIGIN`). Requests from any other origin are rejected. If you expose the bridge through a reverse proxy for this, expose only what the button needs and block the multi-tenant routes, which act on any user id:
+
+```nginx
+location /your-path/garmin-bridge/garmin/ { return 404; }
+location /your-path/garmin-bridge/ { proxy_pass http://127.0.0.1:8420/; }
+```
+
+### 5. Use it on a phone
+
+The web app adapts to small screens: the plan opens on today, one row per day, with plan details and filters behind the ☰ menu. To install it like an app on an iPhone, open it in **Safari**, then Share → **Add to Home Screen** (Android/Chrome: menu → **Install app**). It then opens full-screen with its own icon. Log in once inside the installed app - iOS keeps its storage separate from Safari's. An internet connection is needed (there's no offline mode).
 
 # About
 
