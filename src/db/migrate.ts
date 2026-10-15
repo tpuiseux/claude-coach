@@ -13,7 +13,7 @@ interface TableColumn {
   name: string;
 }
 
-function addUserIdColumns(): void {
+function migrateLegacyColumns(): void {
   for (const table of LEGACY_TABLES_NEEDING_USER_ID) {
     const columns = all<TableColumn>(`PRAGMA table_info(${table})`);
     const hasUserId = columns.some((c) => c.name === "user_id");
@@ -22,11 +22,22 @@ function addUserIdColumns(): void {
     }
   }
   execute("CREATE INDEX IF NOT EXISTS idx_activities_user_date ON activities(user_id, start_date)");
+
+  // The athlete's local start time (Garmin's startTimeLocal) - start_date is
+  // UTC, so grouping activities by plan day needs this to put an early run
+  // on the right date. Only the web app's Garmin sync fills it.
+  const activityColumns = all<TableColumn>("PRAGMA table_info(activities)");
+  if (!activityColumns.some((c) => c.name === "start_date_local")) {
+    execute("ALTER TABLE activities ADD COLUMN start_date_local TEXT");
+  }
+  execute(
+    "CREATE INDEX IF NOT EXISTS idx_activities_user_local ON activities(user_id, start_date_local)"
+  );
 }
 
 export function migrate(): void {
   ensureConfigDir();
   runScript(schema);
-  addUserIdColumns();
+  migrateLegacyColumns();
   log.success("Database schema initialized");
 }

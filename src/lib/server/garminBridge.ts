@@ -91,3 +91,25 @@ export async function pushWorkoutToGarminBridge(
     }
   );
 }
+
+/** A row of coach.db's \`activities\` table as the bridge maps it from Garmin,
+ * plus \`start_date_local\`. Column names are validated before use in SQL
+ * (see garminSync.ts) - this is untyped bridge output. */
+export type BridgeActivityRow = Record<string, unknown>;
+
+/** A daily_wellness row (garmin-bridge/wellness_schema.sql columns). */
+export type BridgeWellnessRow = Record<string, unknown>;
+
+export async function fetchGarminActivities(userId: number, start: string, end: string) {
+  return callBridge<{ activities: BridgeActivityRow[]; duplicatesRemoved: number }>(
+    "/garmin/activities",
+    { method: "POST", body: JSON.stringify({ userId, start, end }) }
+  );
+}
+
+export async function fetchGarminWellness(userId: number, start: string, end: string) {
+  return callBridge<{ days: BridgeWellnessRow[] }>("/garmin/wellness", {
+    method: "POST",
+    body: JSON.stringify({ userId, start, end }),
+  });
+}

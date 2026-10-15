@@ -27,16 +27,20 @@ import os
 import sys
 import threading
 import time
+from datetime import date, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 from garmin_lib import (
+    call_with_retry,
     init_api,
     login_from_tokenstore,
     login_with_credentials,
     resume_mfa,
     save_tokenstore,
 )
+from sync_activities import find_duplicate_groups, map_activity, pick_primary
+from sync_wellness import fetch_body_battery_range, fetch_day
 from garminconnect import (
     GarminConnectAuthenticationError,
     GarminConnectConnectionError,
@@ -59,6 +63,62 @@ MAX_BODY_BYTES = 1024 * 1024
 # Per-connection socket timeout, so a client that announces a body and then
 # never sends it ties up one worker thread for this long, not forever.
 SOCKET_TIMEOUT_SECONDS = 30
+
+
+# Caps on one sync request. Activities are a single Garmin call however long
+# the range; wellness costs ~6 calls per day, so it gets a much shorter leash
+# (Garmin rate-limits aggressively, and the request blocks one worker thread
+# for its whole duration).
+MAX_ACTIVITY_SYNC_DAYS = 120
+MAX_WELLNESS_SYNC_DAYS = 31
+
+
+def parse_date_range(body: dict, max_days: int) -> tuple[date, date] | None:
+    """Validated (start, end) from {"start": "YYYY-MM-DD", "end": ...}, or None."""
+    try:
+        start = date.fromisoformat(str(body.get("start", "")))
+        end = date.fromisoformat(str(body.get("end", "")))
+    except ValueError:
+        return None
+    if start > end or (end - start).days + 1 > max_days:
+        return None
+    return start, end
+
+
+def activities_for_range(garmin, start: date, end: date) -> tuple[list[dict], int]:
+    """Garmin activities in [start, end], mapped to coach.db's activities columns
+    (the same mapping sync_activities.py uses) plus `start_date_local`, with
+    duplicate recordings of one session dropped. Returns (rows, duplicates removed)."""
+    raw = call_with_retry(
+        garmin.get_activities_by_date, start.isoformat(), end.isoformat(), sortorder="asc", label="activities"
+    )
+    rows = []
+    for activity in raw:
+        row = map_activity(activity)
+        # The user's own calendar day: start_date is UTC, so an early-morning
+        # run in UTC+2 would otherwise land on the previous day.
+        local = activity.get("startTimeLocal")
+        row["start_date_local"] = local.replace(" ", "T") if local else None
+        rows.append(row)
+
+    by_id = {row["id"]: row for row in rows}
+    candidates = [{**row, "raw_json": json.loads(row["raw_json"])} for row in rows]
+    dropped = set()
+    for group in find_duplicate_groups(candidates):
+        primary = pick_primary(group)
+        dropped.update(r["id"] for r in group if r["id"] != primary["id"])
+    return [by_id[i] for i in by_id if i not in dropped], len(dropped)
+
+
+def wellness_for_range(garmin, start: date, end: date) -> list[dict]:
+    """One daily_wellness row per day in [start, end], as sync_wellness.py builds them."""
+    body_battery = fetch_body_battery_range(garmin, start.isoformat(), end.isoformat())
+    rows = []
+    day = start
+    while day <= end:
+        rows.append(fetch_day(garmin, day.isoformat(), body_battery))
+        day += timedelta(days=1)
+    return rows
 
 
 def is_valid_user_id(value: str) -> bool:
@@ -231,6 +291,12 @@ def make_handler(api, dry_run, token, allowed_origins, multiuser_dir: Path):
                 return
             if self.path == "/garmin/push-workout":
                 self._handle_garmin_push_workout()
+                return
+            if self.path == "/garmin/activities":
+                self._handle_garmin_sync("activities")
+                return
+            if self.path == "/garmin/wellness":
+                self._handle_garmin_sync("wellness")
                 return
 
             self._json(404, {"error": "not found"})
@@ -478,6 +544,69 @@ def make_handler(api, dry_run, token, allowed_origins, multiuser_dir: Path):
                 self._json(200, {"workoutId": workout_id, "scheduled": bool(date), "date": date})
             except Exception as e:
                 self._json(502, {"error": str(e)})
+
+        def _user_session(self, user_id: str):
+            """The user's Garmin session, or None after sending the error response."""
+            tokenstore = tokenstore_path_for(user_id, multiuser_dir)
+            if not Path(tokenstore).exists():
+                self._json(409, {"error": "Compte Garmin non connecte pour cet utilisateur."})
+                return None
+            try:
+                return login_from_tokenstore(tokenstore)
+            except (GarminConnectAuthenticationError, GarminConnectConnectionError) as e:
+                log_garmin_error("session", user_id, e)
+                self._json(
+                    409,
+                    {"error": "Session Garmin expiree - reconnecte le compte dans les Settings."},
+                )
+                return None
+
+        def _handle_garmin_sync(self, kind: str) -> None:
+            """POST /garmin/activities | /garmin/wellness {userId, start, end}.
+
+            Read-only towards Garmin, and stateless here: the rows go back to
+            the web app, which owns the database they're stored in.
+            """
+            if not is_authorized(self.headers):
+                self._json(401, {"error": "unauthorized"})
+                return
+
+            body = self._read_json_body()
+            if body is None:
+                self._json(400, {"error": "invalid JSON body"})
+                return
+
+            user_id = str(body.get("userId", ""))
+            max_days = MAX_ACTIVITY_SYNC_DAYS if kind == "activities" else MAX_WELLNESS_SYNC_DAYS
+            date_range = parse_date_range(body, max_days)
+            if not is_valid_user_id(user_id) or date_range is None:
+                self._json(
+                    400,
+                    {"error": f"userId and a start/end range of at most {max_days} days are required"},
+                )
+                return
+            start, end = date_range
+
+            if dry_run:
+                self._json(200, {"activities": [], "duplicatesRemoved": 0} if kind == "activities" else {"days": []})
+                return
+
+            garmin = self._user_session(user_id)
+            if garmin is None:
+                return
+
+            try:
+                if kind == "activities":
+                    rows, removed = activities_for_range(garmin, start, end)
+                    self._json(200, {"activities": rows, "duplicatesRemoved": removed})
+                else:
+                    self._json(200, {"days": wellness_for_range(garmin, start, end)})
+            except GarminConnectTooManyRequestsError as e:
+                log_garmin_error(kind, user_id, e)
+                self._json(429, {"error": "Garmin limite les requetes - reessaie plus tard."})
+            except Exception as e:
+                log_garmin_error(kind, user_id, e)
+                self._json(502, {"error": f"Synchronisation Garmin impossible: {e}"})
 
         def log_message(self, format: str, *args) -> None:  # noqa: A002 - matches base signature
             print("[garmin-bridge]", format % args)

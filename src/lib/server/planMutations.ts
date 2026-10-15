@@ -45,6 +45,22 @@ export function toggleWorkoutComplete(plan: TrainingPlan, workoutId: string): Tr
   return plan;
 }
 
+/** Idempotent counterpart to toggleWorkoutComplete, for callers that know the
+ * state they want (e.g. logging feedback implies the workout was done). */
+export function setWorkoutCompleted(
+  plan: TrainingPlan,
+  workoutId: string,
+  completed: boolean
+): TrainingPlan {
+  const found = findWorkout(plan, workoutId);
+  if (!found) throw new WorkoutNotFoundError(workoutId);
+  if (found.workout.completed === completed) return plan;
+
+  found.workout.completed = completed;
+  plan.meta.updatedAt = new Date().toISOString();
+  return plan;
+}
+
 export function moveWorkout(plan: TrainingPlan, workoutId: string, newDate: string): TrainingPlan {
   const found = findWorkout(plan, workoutId);
   if (!found) throw new WorkoutNotFoundError(workoutId);

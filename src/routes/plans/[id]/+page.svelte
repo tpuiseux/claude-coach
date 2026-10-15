@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onMount } from "svelte";
   import { invalidateAll } from "$app/navigation";
   import { page } from "$app/state";
   import { base } from "$app/paths";
@@ -14,6 +15,7 @@
   import WeeksContainer from "$lib/components/WeeksContainer.svelte";
   import WorkoutModal from "$lib/components/WorkoutModal.svelte";
   import SettingsModal from "$lib/components/SettingsModal.svelte";
+  import { runSync } from "$lib/garminSyncClient.js";
 
   interface Props {
     data: PageData;
@@ -39,6 +41,45 @@
     | null;
 
   let modalState = $state<ModalState>(null);
+
+  // Pull new Garmin activities/recovery data when the plan is opened. The
+  // server skips this if the last sync is under 6h old or Garmin isn't
+  // connected; otherwise it runs in the background and the page refreshes
+  // once it's done.
+  let garminSyncing = $state(false);
+  onMount(() => {
+    runSync(false, () => (garminSyncing = true))
+      .then((state) => (state ? invalidateAll() : undefined))
+      .catch(() => {
+        // Best-effort: Settings -> Garmin shows the sync state and any error.
+      })
+      .finally(() => (garminSyncing = false));
+  });
+
+  async function feedbackRequest(workoutId: string, init: RequestInit) {
+    const res = await fetch(`${workoutsUrl(workoutId)}/feedback`, init);
+    if (!res.ok) {
+      const body = await res.json().catch(() => null);
+      throw new Error(body?.message ?? `Request failed (${res.status})`);
+    }
+    await invalidateAll();
+  }
+
+  async function handleSaveFeedback(workoutId: string, feedback: unknown) {
+    await feedbackRequest(workoutId, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(feedback),
+    });
+    // The server marked it completed; reflect that in the open modal too.
+    if (modalState && modalState.mode !== "create" && modalState.workout.id === workoutId) {
+      modalState = { ...modalState, workout: { ...modalState.workout, completed: true } };
+    }
+  }
+
+  async function handleDeleteFeedback(workoutId: string) {
+    await feedbackRequest(workoutId, { method: "DELETE" });
+  }
 
   const planDateRange = $derived.by(() => {
     const dates = (data.plan.weeks ?? []).flatMap((w) => (w.days ?? []).map((d) => d.date)).sort();
@@ -180,6 +221,9 @@
     {/if}
     <WeeksContainer
       plan={data.plan}
+      activitiesByDate={data.activitiesByDate}
+      feedback={data.feedback}
+      {settings}
       {filters}
       onWorkoutClick={handleWorkoutClick}
       onWorkoutMove={handleWorkoutMove}
@@ -187,6 +231,10 @@
     />
   </main>
 </div>
+
+{#if garminSyncing}
+  <div class="sync-pill" role="status">Syncing Garmin…</div>
+{/if}
 
 {#if modalState}
   <WorkoutModal
@@ -201,6 +249,10 @@
     onDelete={handleDelete}
     onMove={handleMoveFromModal}
     {planDateRange}
+    feedback={modalState.mode === "create" ? undefined : data.feedback[modalState.workout.id]}
+    dayActivities={data.activitiesByDate[modalState.day.date] ?? []}
+    onSaveFeedback={handleSaveFeedback}
+    onDeleteFeedback={handleDeleteFeedback}
   />
 {/if}
 
@@ -210,6 +262,7 @@
     onClose={() => (settingsOpen = false)}
     onChange={handleSettingsChange}
     onExportPlan={handleExportPlan}
+    onGarminSynced={() => invalidateAll()}
   />
 {/if}
 
@@ -230,6 +283,20 @@
       margin-left: 0;
       padding: 1rem 0.75rem 2rem;
     }
+  }
+
+  .sync-pill {
+    position: fixed;
+    right: 1rem;
+    bottom: 1rem;
+    z-index: 40;
+    padding: 0.45rem 0.85rem;
+    border-radius: 999px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-medium);
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    pointer-events: none;
   }
 
   .error-banner {

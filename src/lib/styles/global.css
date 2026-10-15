@@ -162,7 +162,8 @@ button {
 
 /* Inputs */
 input,
-select {
+select,
+textarea {
   font-family: inherit;
 }
 

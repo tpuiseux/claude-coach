@@ -3,7 +3,20 @@
   import { base } from "$app/paths";
   import type { Workout, TrainingDay, Sport, WorkoutType } from "../../schema/training-plan.js";
   import type { Settings } from "../settings.js";
-  import { formatDuration, formatDistance, formatDate, getZoneInfo } from "../utils.js";
+  import {
+    formatActivitySummary,
+    formatDuration,
+    formatDistance,
+    formatDate,
+    getZoneInfo,
+  } from "../utils.js";
+  import {
+    FEELINGS,
+    FEELING_LABELS,
+    type Feeling,
+    type RecordedActivity,
+    type WorkoutFeedback,
+  } from "../trainingLog.js";
   import { isGarminConnectSupported } from "../garminSports.js";
   import {
     exportWorkout,
@@ -30,6 +43,19 @@
     // doesn't work on touch screens. Bounds limit the date picker to the plan.
     onMove: (workoutId: string, newDate: string) => void;
     planDateRange: { min: string; max: string };
+    feedback?: WorkoutFeedback;
+    dayActivities: RecordedActivity[];
+    /** Rejects with a user-facing message on failure. */
+    onSaveFeedback: (workoutId: string, feedback: FeedbackDraft) => Promise<void>;
+    onDeleteFeedback: (workoutId: string) => Promise<void>;
+  }
+
+  interface FeedbackDraft {
+    rpe: number | null;
+    feeling: Feeling | null;
+    pain: boolean;
+    painNotes: string | null;
+    notes: string | null;
   }
 
   let {
@@ -44,7 +70,69 @@
     onDelete,
     onMove,
     planDateRange,
+    feedback,
+    dayActivities,
+    onSaveFeedback,
+    onDeleteFeedback,
   }: Props = $props();
+
+  // How-did-it-go form (view mode). Starts closed; opened empty or prefilled.
+  let editingFeedback = $state(false);
+  let fbRpe = $state<number | null>(null);
+  let fbFeeling = $state<Feeling | null>(null);
+  let fbPain = $state(false);
+  let fbPainNotes = $state("");
+  let fbNotes = $state("");
+  let fbSaving = $state(false);
+  let fbError = $state<string | null>(null);
+
+  function startFeedbackEdit() {
+    fbRpe = feedback?.rpe ?? null;
+    fbFeeling = feedback?.feeling ?? null;
+    fbPain = feedback?.pain ?? false;
+    fbPainNotes = feedback?.painNotes ?? "";
+    fbNotes = feedback?.notes ?? "";
+    fbError = null;
+    editingFeedback = true;
+  }
+
+  const feedbackIsEmpty = $derived(
+    fbRpe === null && fbFeeling === null && !fbPain && !fbNotes.trim()
+  );
+
+  async function saveFeedback() {
+    if (!workout || fbSaving) return;
+    fbSaving = true;
+    fbError = null;
+    try {
+      await onSaveFeedback(workout.id, {
+        rpe: fbRpe,
+        feeling: fbFeeling,
+        pain: fbPain,
+        painNotes: fbPain ? fbPainNotes.trim() || null : null,
+        notes: fbNotes.trim() || null,
+      });
+      editingFeedback = false;
+    } catch (err) {
+      fbError = err instanceof Error ? err.message : "Couldn't save.";
+    } finally {
+      fbSaving = false;
+    }
+  }
+
+  async function removeFeedback() {
+    if (!workout || fbSaving) return;
+    fbSaving = true;
+    fbError = null;
+    try {
+      await onDeleteFeedback(workout.id);
+      editingFeedback = false;
+    } catch (err) {
+      fbError = err instanceof Error ? err.message : "Couldn't remove.";
+    } finally {
+      fbSaving = false;
+    }
+  }
 
   // Use untrack to explicitly capture initial values (these are intentional local copies)
   let currentMode = $state<Mode>(untrack(() => mode));
@@ -285,6 +373,126 @@
                 /\\n/g,
                 "\n"
               )}</pre>
+          </div>
+        {/if}
+
+        {#if dayActivities.length > 0}
+          <div class="modal-section">
+            <h4 class="modal-section-title">Recorded on Garmin that day</h4>
+            {#each dayActivities as activity (activity.id)}
+              <div class="recorded-row">
+                <span class="recorded-row-name">{activity.name ?? activity.sportType}</span>
+                <span class="recorded-row-summary">{formatActivitySummary(activity, settings)}</span
+                >
+              </div>
+            {/each}
+          </div>
+        {/if}
+
+        {#if workout}
+          <div class="modal-section feedback-section">
+            <h4 class="modal-section-title">How did it go?</h4>
+
+            {#if editingFeedback}
+              <div class="fb-field">
+                <span class="fb-label">Effort (RPE)</span>
+                <div class="rpe-scale" role="radiogroup" aria-label="Perceived effort, 1 to 10">
+                  {#each [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] as value (value)}
+                    <button
+                      type="button"
+                      class="rpe-btn"
+                      class:selected={fbRpe === value}
+                      role="radio"
+                      aria-checked={fbRpe === value}
+                      onclick={() => (fbRpe = fbRpe === value ? null : value)}>{value}</button
+                    >
+                  {/each}
+                </div>
+                <div class="rpe-hint"><span>Very easy</span><span>All-out</span></div>
+              </div>
+
+              <div class="fb-field">
+                <span class="fb-label">How did you feel?</span>
+                <div class="feeling-chips">
+                  {#each FEELINGS as value (value)}
+                    <button
+                      type="button"
+                      class="feeling-chip"
+                      class:selected={fbFeeling === value}
+                      aria-pressed={fbFeeling === value}
+                      onclick={() => (fbFeeling = fbFeeling === value ? null : value)}
+                    >
+                      {FEELING_LABELS[value]}
+                    </button>
+                  {/each}
+                </div>
+              </div>
+
+              <label class="fb-pain">
+                <input type="checkbox" bind:checked={fbPain} />
+                Pain or niggle
+              </label>
+              {#if fbPain}
+                <input
+                  type="text"
+                  class="form-input"
+                  maxlength="500"
+                  placeholder="Where, and how bad? e.g. left calf, mild"
+                  bind:value={fbPainNotes}
+                />
+              {/if}
+
+              <textarea
+                class="form-textarea"
+                rows="3"
+                maxlength="2000"
+                placeholder="Notes - sleep, weather, legs, anything worth knowing"
+                bind:value={fbNotes}
+              ></textarea>
+
+              {#if fbError}
+                <p class="fb-error">{fbError}</p>
+              {/if}
+
+              <div class="fb-actions">
+                {#if feedback}
+                  <button class="fb-remove" onclick={removeFeedback} disabled={fbSaving}>
+                    Remove
+                  </button>
+                {/if}
+                <button class="cancel-btn" onclick={() => (editingFeedback = false)}>Cancel</button>
+                <button
+                  class="save-btn"
+                  onclick={saveFeedback}
+                  disabled={fbSaving || feedbackIsEmpty}
+                >
+                  {fbSaving ? "Saving…" : "Save"}
+                </button>
+              </div>
+              {#if !displayWorkout.completed}
+                <p class="fb-hint">Saving also marks this workout as done.</p>
+              {/if}
+            {:else if feedback}
+              <div class="fb-summary">
+                {#if feedback.rpe}
+                  <span class="fb-pill">RPE {feedback.rpe}/10</span>
+                {/if}
+                {#if feedback.feeling}
+                  <span class="fb-pill">{FEELING_LABELS[feedback.feeling]}</span>
+                {/if}
+                {#if feedback.pain}
+                  <span class="fb-pill pain"
+                    >Pain{feedback.painNotes ? `: ${feedback.painNotes}` : ""}</span
+                  >
+                {/if}
+              </div>
+              {#if feedback.notes}
+                <p class="modal-description fb-notes">{feedback.notes}</p>
+              {/if}
+              <button class="fb-edit" onclick={startFeedbackEdit}>Edit</button>
+            {:else}
+              <button class="fb-start" onclick={startFeedbackEdit}>+ Log how it went</button>
+            {/if}
           </div>
         {/if}
       {:else}
@@ -958,6 +1166,179 @@
     display: flex;
     align-items: center;
     gap: 0.75rem;
+  }
+
+  .recorded-row {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 0.25rem 1rem;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--border-subtle);
+    font-size: 0.9rem;
+  }
+
+  .recorded-row:last-child {
+    border-bottom: none;
+  }
+
+  .recorded-row-summary {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+  }
+
+  .feedback-section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+  }
+
+  .feedback-section .modal-section-title {
+    margin-bottom: 0;
+  }
+
+  .fb-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+  }
+
+  .fb-label {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+  }
+
+  .rpe-scale {
+    display: grid;
+    grid-template-columns: repeat(10, 1fr);
+    gap: 4px;
+  }
+
+  .rpe-btn {
+    min-height: 40px;
+    padding: 0;
+    border-radius: 8px;
+    border: 1px solid var(--border-medium);
+    background: var(--bg-tertiary);
+    color: var(--text-secondary);
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.9rem;
+  }
+
+  .rpe-btn.selected {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--bg-primary);
+    font-weight: 700;
+  }
+
+  .rpe-hint {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.7rem;
+    color: var(--text-muted);
+  }
+
+  .feeling-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+  }
+
+  .feeling-chip {
+    padding: 0.5rem 0.9rem;
+    border-radius: 999px;
+    border: 1px solid var(--border-medium);
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+  }
+
+  .feeling-chip.selected {
+    border-color: var(--accent);
+    background: var(--accent-glow);
+    color: var(--text-primary);
+    font-weight: 600;
+  }
+
+  .fb-pain {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+    color: var(--text-primary);
+  }
+
+  .fb-pain input {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--accent);
+  }
+
+  .fb-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.6rem;
+  }
+
+  .fb-remove {
+    margin-right: auto;
+    padding: 0.75rem 0.5rem;
+    border: none;
+    background: transparent;
+    color: #f87171;
+    font-size: 0.85rem;
+  }
+
+  .fb-error {
+    font-size: 0.85rem;
+    color: #f87171;
+  }
+
+  .fb-hint {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    text-align: right;
+  }
+
+  .fb-summary {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+  }
+
+  .fb-pill {
+    padding: 0.3rem 0.7rem;
+    border-radius: 999px;
+    background: var(--bg-tertiary);
+    font-size: 0.85rem;
+    color: var(--text-primary);
+  }
+
+  .fb-pill.pain {
+    background: rgba(239, 68, 68, 0.12);
+    color: #f87171;
+  }
+
+  .fb-notes {
+    margin: 0;
+    white-space: pre-wrap;
+  }
+
+  .fb-start,
+  .fb-edit {
+    align-self: flex-start;
+    padding: 0.6rem 1rem;
+    border-radius: 10px;
+    border: 1px dashed var(--border-medium);
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+  }
+
+  .fb-edit {
+    border-style: solid;
   }
 
   .move-panel {

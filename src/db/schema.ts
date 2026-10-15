@@ -155,4 +155,70 @@ CREATE TABLE IF NOT EXISTS garmin_credentials (
   tokenstore_path TEXT NOT NULL,
   connected_at TEXT DEFAULT (datetime('now'))
 );
+
+-- Last Garmin sync per user (web app only - see lib/server/garminSync.ts).
+-- Activities land in \`activities\` above (user_id set), wellness in
+-- daily_wellness below.
+CREATE TABLE IF NOT EXISTS garmin_sync_state (
+  user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  status TEXT NOT NULL,             -- running, success, failed
+  started_at TEXT NOT NULL,
+  finished_at TEXT,
+  last_success_at TEXT,             -- drives the next sync's start date
+  activities_synced INTEGER,
+  wellness_days_synced INTEGER,
+  error TEXT
+);
+
+-- Daily recovery signals from Garmin, one row per user per day. Same columns
+-- as garmin-bridge/wellness_schema.sql (the CLI's separate wellness.db),
+-- plus user_id.
+CREATE TABLE IF NOT EXISTS daily_wellness (
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  date TEXT NOT NULL,               -- YYYY-MM-DD
+  sleep_score INTEGER,
+  sleep_seconds INTEGER,
+  deep_sleep_seconds INTEGER,
+  light_sleep_seconds INTEGER,
+  rem_sleep_seconds INTEGER,
+  awake_sleep_seconds INTEGER,
+  avg_sleep_stress REAL,
+  avg_stress INTEGER,
+  max_stress INTEGER,
+  resting_hr INTEGER,
+  hrv_last_night_avg INTEGER,
+  hrv_weekly_avg INTEGER,
+  hrv_status TEXT,
+  body_battery_high INTEGER,
+  body_battery_low INTEGER,
+  training_readiness_score INTEGER,
+  training_readiness_level TEXT,
+  training_readiness_feedback TEXT,
+  acute_training_load REAL,
+  chronic_training_load REAL,
+  acwr REAL,
+  acwr_status TEXT,
+  training_status TEXT,
+  vo2max REAL,
+  raw_json TEXT,
+  synced_at TEXT DEFAULT (datetime('now')),
+  PRIMARY KEY (user_id, date)
+);
+
+-- How a workout actually felt, as reported by the athlete. Kept apart from
+-- the plan JSON on purpose: re-importing a plan replaces the whole JSON, and
+-- feedback must survive that. Keyed by the workout's id within its plan.
+CREATE TABLE IF NOT EXISTS workout_feedback (
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  plan_id TEXT NOT NULL,
+  workout_id TEXT NOT NULL,
+  rpe INTEGER,                      -- 1-10, perceived effort
+  feeling TEXT,                     -- great, good, ok, hard, awful
+  pain INTEGER NOT NULL DEFAULT 0,  -- 0/1: any pain or niggle
+  pain_notes TEXT,
+  notes TEXT,
+  created_at TEXT DEFAULT (datetime('now')),
+  updated_at TEXT DEFAULT (datetime('now')),
+  PRIMARY KEY (user_id, plan_id, workout_id)
+);
 `;

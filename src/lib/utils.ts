@@ -1,5 +1,6 @@
 import type { Settings } from "./settings.js";
 import type { Sport } from "../schema/training-plan.js";
+import type { RecordedActivity } from "./trainingLog.js";
 
 const METERS_PER_YARD = 0.9144;
 const KM_PER_MILE = 1.60934;
@@ -144,4 +145,44 @@ export function getSportIcon(sport: Sport): string {
     rest: "\u{1F6CC}",
   };
   return icons[sport] || "";
+}
+
+// Recorded activities use Strava-style sport types (see SPORT_TYPE_MAP in
+// garmin-bridge/sync_activities.py); the plan uses its own Sport values.
+const ACTIVITY_SPORTS: Record<string, Sport> = {
+  Run: "run",
+  TrailRun: "run",
+  VirtualRun: "run",
+  Ride: "bike",
+  GravelRide: "bike",
+  MountainBikeRide: "bike",
+  VirtualRide: "bike",
+  Swim: "swim",
+  WeightTraining: "strength",
+};
+
+export function activitySport(sportType: string | null): Sport | null {
+  return (sportType && ACTIVITY_SPORTS[sportType]) || null;
+}
+
+/** "10.2km · 52m · 148 bpm" - whichever parts the activity has. */
+export function formatActivitySummary(activity: RecordedActivity, settings: Settings): string {
+  const sport = activitySport(activity.sportType) ?? "run";
+  const parts = [
+    activity.distanceMeters ? formatDistance(activity.distanceMeters, sport, settings) : "",
+    activity.movingSeconds ? formatDuration(Math.round(activity.movingSeconds / 60)) : "",
+    activity.averageHeartrate ? `${Math.round(activity.averageHeartrate)} bpm` : "",
+  ];
+  return parts.filter(Boolean).join(" · ");
+}
+
+/** "just now", "12 min ago", "3 h ago", "2 days ago". */
+export function formatRelativeTime(iso: string, now = Date.now()): string {
+  const minutes = Math.round((now - Date.parse(iso)) / 60000);
+  if (minutes < 1) return "just now";
+  if (minutes < 60) return `${minutes} min ago`;
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return `${hours} h ago`;
+  const days = Math.round(hours / 24);
+  return `${days} day${days > 1 ? "s" : ""} ago`;
 }

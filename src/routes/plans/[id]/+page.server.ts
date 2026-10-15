@@ -1,11 +1,19 @@
 import { error } from "@sveltejs/kit";
 import type { PageServerLoad } from "./$types";
 import { loadPlanForUser } from "$lib/server/plans.js";
+import { getActivitiesByDate } from "$lib/server/activities.js";
+import { getFeedbackForPlan } from "$lib/server/feedback.js";
 
 export const load: PageServerLoad = async ({ params, locals }) => {
-  const plan = loadPlanForUser(params.id, locals.user!.id);
+  const userId = locals.user!.id;
+  const plan = loadPlanForUser(params.id, userId);
   if (!plan) {
     throw error(404, "Plan not found");
   }
-  return { plan };
+
+  const dates = (plan.weeks ?? []).flatMap((w) => (w.days ?? []).map((d) => d.date)).sort();
+  const activitiesByDate =
+    dates.length > 0 ? getActivitiesByDate(userId, dates[0], dates[dates.length - 1]) : {};
+
+  return { plan, activitiesByDate, feedback: getFeedbackForPlan(userId, params.id) };
 };

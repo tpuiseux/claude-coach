@@ -1,18 +1,32 @@
 <script lang="ts">
   import { afterNavigate } from "$app/navigation";
   import type { TrainingPlan, TrainingDay, Workout } from "../../schema/training-plan.js";
+  import type { RecordedActivity, WorkoutFeedback } from "../trainingLog.js";
+  import type { Settings } from "../settings.js";
   import WeekCard from "./WeekCard.svelte";
   import { getTodayISO } from "../utils.js";
 
   interface Props {
     plan: TrainingPlan;
+    activitiesByDate: Record<string, RecordedActivity[]>;
+    feedback: Record<string, WorkoutFeedback>;
+    settings: Settings;
     filters: { sport: string; status: string };
     onWorkoutClick: (workout: Workout, day: TrainingDay) => void;
     onWorkoutMove: (workoutId: string, newDate: string) => void;
     onAddWorkout: (day: TrainingDay) => void;
   }
 
-  let { plan, filters, onWorkoutClick, onWorkoutMove, onAddWorkout }: Props = $props();
+  let {
+    plan,
+    activitiesByDate,
+    feedback,
+    settings,
+    filters,
+    onWorkoutClick,
+    onWorkoutMove,
+    onAddWorkout,
+  }: Props = $props();
 
   const today = getTodayISO();
 
@@ -68,6 +82,9 @@
       <WeekCard
         {week}
         {today}
+        {activitiesByDate}
+        {feedback}
+        {settings}
         {filterWorkout}
         {onWorkoutClick}
         onDrop={onWorkoutMove}

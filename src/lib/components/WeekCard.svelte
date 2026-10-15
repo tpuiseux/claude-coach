@@ -1,11 +1,16 @@
 <script lang="ts">
   import type { TrainingWeek, TrainingDay, Workout } from "../../schema/training-plan.js";
+  import type { RecordedActivity, WorkoutFeedback } from "../trainingLog.js";
+  import type { Settings } from "../settings.js";
   import WorkoutCard from "./WorkoutCard.svelte";
-  import { parseDate } from "../utils.js";
+  import { formatActivitySummary, parseDate } from "../utils.js";
 
   interface Props {
     week: TrainingWeek;
     today: string;
+    activitiesByDate: Record<string, RecordedActivity[]>;
+    feedback: Record<string, WorkoutFeedback>;
+    settings: Settings;
     filterWorkout: (workout: Workout) => boolean;
     onWorkoutClick: (workout: Workout, day: TrainingDay) => void;
     onDrop: (workoutId: string, newDate: string) => void;
@@ -13,8 +18,18 @@
     animationDelay: number;
   }
 
-  let { week, today, filterWorkout, onWorkoutClick, onDrop, onAddWorkout, animationDelay }: Props =
-    $props();
+  let {
+    week,
+    today,
+    activitiesByDate,
+    feedback,
+    settings,
+    filterWorkout,
+    onWorkoutClick,
+    onDrop,
+    onAddWorkout,
+    animationDelay,
+  }: Props = $props();
 
   let dragOverDate = $state<string | null>(null);
 
@@ -82,12 +97,21 @@
               <WorkoutCard
                 {workout}
                 isCompleted={!!workout.completed}
+                feedback={feedback[workout.id]}
                 onClick={() => onWorkoutClick(workout, day)}
               />
             {/each}
           {:else if (day.workouts ?? []).length === 0}
             <div class="empty-day">Rest</div>
           {/if}
+
+          {#each activitiesByDate[day.date] ?? [] as activity (activity.id)}
+            <div class="recorded-activity" title={activity.name ?? ""}>
+              <span class="recorded-label">Garmin</span>
+              <span class="recorded-name">{activity.name ?? activity.sportType}</span>
+              <span class="recorded-summary">{formatActivitySummary(activity, settings)}</span>
+            </div>
+          {/each}
 
           <button class="add-workout-btn" onclick={() => onAddWorkout(day)} title="Add workout">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -247,6 +271,42 @@
     flex-direction: column;
     gap: 0.5rem;
     min-width: 0;
+  }
+
+  /* What was actually recorded, under what was planned: quieter than a
+   * workout card, so the plan stays the main thing on the page. */
+  .recorded-activity {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.15rem 0.4rem;
+    padding: 0.35rem 0.5rem;
+    border-radius: 6px;
+    border: 1px dashed var(--border-medium);
+    font-size: 0.7rem;
+    line-height: 1.35;
+    color: var(--text-secondary);
+  }
+
+  .recorded-label {
+    font-size: 0.6rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--accent);
+  }
+
+  .recorded-name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 100%;
+  }
+
+  .recorded-summary {
+    font-family: "JetBrains Mono", monospace;
+    color: var(--text-muted);
   }
 
   .day-header {

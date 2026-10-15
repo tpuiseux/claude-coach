@@ -160,7 +160,9 @@ If you already have a `~/.claude-coach/coach.db` from using the CLI/skill direct
 
 ### 4. Garmin Connect integration (optional)
 
-Workouts can be pushed straight to a connected Garmin Connect account from the web app (Settings → Garmin, then a "Send to Garmin" button on each workout). This needs a small Python bridge running alongside the web app - the app never talks to Garmin directly, and the bridge should **never** be exposed publicly.
+Workouts can be pushed straight to a connected Garmin Connect account from the web app (Settings → Garmin, then a "Send to Garmin" button on each workout). Connected accounts also sync back what was actually recorded: activities appear under the planned workouts of each day, and recovery data (sleep, HRV, resting HR, training readiness, training load) is stored per athlete. The sync runs when a plan is opened if the last one is over 6 hours old, or from Settings → Garmin → "Sync now"; the first sync fetches six weeks of activities and two weeks of recovery data.
+
+This needs a small Python bridge running alongside the web app - the app never talks to Garmin directly, and the bridge should **never** be exposed publicly. The bridge imports `garmin_lib.py`, `sync_activities.py` and `sync_wellness.py`, so keep all four files of `garmin-bridge/` together wherever it runs.
 
 ```bash
 cd garmin-bridge

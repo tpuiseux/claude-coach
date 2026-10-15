@@ -1,14 +1,16 @@
 <script lang="ts">
   import type { Workout } from "../../schema/training-plan.js";
+  import type { WorkoutFeedback } from "../trainingLog.js";
   import { formatDuration } from "../utils.js";
 
   interface Props {
     workout: Workout;
     isCompleted: boolean;
+    feedback?: WorkoutFeedback;
     onClick: () => void;
   }
 
-  let { workout, isCompleted, onClick }: Props = $props();
+  let { workout, isCompleted, feedback, onClick }: Props = $props();
 
   let isDragging = $state(false);
 
@@ -34,8 +36,20 @@
 >
   <div class="workout-sport">{workout.sport}</div>
   <div class="workout-name">{workout.name}</div>
-  {#if workout.durationMinutes}
-    <div class="workout-duration">{formatDuration(workout.durationMinutes)}</div>
+  {#if workout.durationMinutes || feedback}
+    <div class="workout-meta">
+      {#if workout.durationMinutes}
+        <span class="workout-duration">{formatDuration(workout.durationMinutes)}</span>
+      {/if}
+      {#if feedback?.rpe}
+        <span class="feedback-badge" title="Perceived effort">RPE {feedback.rpe}</span>
+      {:else if feedback}
+        <span class="feedback-badge" title="Feedback logged">✎</span>
+      {/if}
+      {#if feedback?.pain}
+        <span class="feedback-badge pain" title={feedback.painNotes ?? "Pain reported"}>Pain</span>
+      {/if}
+    </div>
   {/if}
 </button>
 
@@ -173,11 +187,32 @@
     line-height: 1.3;
   }
 
+  .workout-meta {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-top: 0.3rem;
+  }
+
   .workout-duration {
     font-family: "JetBrains Mono", monospace;
     font-size: 0.7rem;
     color: var(--text-muted);
-    margin-top: 0.3rem;
+  }
+
+  .feedback-badge {
+    font-size: 0.65rem;
+    font-weight: 600;
+    padding: 0.05rem 0.35rem;
+    border-radius: 4px;
+    background: var(--bg-elevated);
+    color: var(--text-secondary);
+  }
+
+  .feedback-badge.pain {
+    background: rgba(239, 68, 68, 0.15);
+    color: #f87171;
   }
 
   @media (max-width: 800px) {

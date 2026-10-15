@@ -5,6 +5,7 @@ import type {
   Workout,
   WorkoutType,
 } from "../../schema/training-plan.js";
+import { FEELINGS, type Feeling } from "../trainingLog.js";
 
 /**
  * Hand-rolled request-body validation for the plan mutation routes (no zod
@@ -263,4 +264,56 @@ export function parseZones(input: unknown): AthleteZones {
   }
 
   return input as AthleteZones;
+}
+
+// ---------------------------------------------------------------------------
+// Workout feedback
+// ---------------------------------------------------------------------------
+
+export interface WorkoutFeedbackInput {
+  rpe: number | null;
+  feeling: Feeling | null;
+  pain: boolean;
+  painNotes: string | null;
+  notes: string | null;
+}
+
+function optionalText(value: unknown, field: string, max: number): string | null {
+  if (value === undefined || value === null) return null;
+  if (typeof value !== "string") throw new ValidationError(`${field} must be text`);
+  const trimmed = value.trim();
+  if (trimmed.length > max) throw new ValidationError(`${field} must be at most ${max} characters`);
+  return trimmed || null;
+}
+
+/** Validates how-did-it-go feedback. Every field is optional, but an empty
+ * submission is rejected - it would record nothing. */
+export function parseWorkoutFeedback(input: unknown): WorkoutFeedbackInput {
+  if (!isPlainObject(input)) throw new ValidationError("feedback must be an object");
+
+  const rpe = input.rpe ?? null;
+  if (rpe !== null && !(Number.isInteger(rpe) && (rpe as number) >= 1 && (rpe as number) <= 10)) {
+    throw new ValidationError("rpe must be a whole number from 1 to 10");
+  }
+
+  const feeling = input.feeling ?? null;
+  if (feeling !== null && !FEELINGS.includes(feeling as Feeling)) {
+    throw new ValidationError(`feeling must be one of ${FEELINGS.join(", ")}`);
+  }
+
+  const pain = input.pain ?? false;
+  if (typeof pain !== "boolean") throw new ValidationError("pain must be true or false");
+
+  const parsed: WorkoutFeedbackInput = {
+    rpe: rpe as number | null,
+    feeling: feeling as Feeling | null,
+    pain,
+    painNotes: pain ? optionalText(input.painNotes, "painNotes", 500) : null,
+    notes: optionalText(input.notes, "notes", 2000),
+  };
+
+  if (parsed.rpe === null && parsed.feeling === null && !parsed.pain && parsed.notes === null) {
+    throw new ValidationError("Nothing to save - add an effort rating, a feeling, or a note");
+  }
+  return parsed;
 }

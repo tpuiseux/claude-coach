@@ -10,6 +10,8 @@
     mergeRecalculatedRunPaceZones,
     recalculateSwimPaceZones,
   } from "../settings.js";
+  import { getSyncStatus, runSync, type SyncState } from "../garminSyncClient.js";
+  import { formatRelativeTime } from "../utils.js";
 
   const version = __APP_VERSION__;
 
@@ -18,9 +20,10 @@
     onClose: () => void;
     onChange: (settings: Settings) => void;
     onExportPlan: () => void;
+    onGarminSynced: () => void;
   }
 
-  let { settings, onClose, onChange, onExportPlan }: Props = $props();
+  let { settings, onClose, onChange, onExportPlan, onGarminSynced }: Props = $props();
 
   let activeTab = $state("general");
   // Use untrack to explicitly capture initial value (intentional local copy)
@@ -82,11 +85,58 @@
       .then((r) => r.json())
       .then((data) => {
         garminState = data.connected ? "connected" : "disconnected";
+        if (data.connected) loadSyncState();
       })
       .catch(() => {
         garminState = "disconnected";
       });
   });
+
+  // Garmin data sync (activities + recovery) ------------------------------
+  const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+
+  let syncState = $state<SyncState | null>(null);
+  let syncing = $state(false);
+
+  function loadSyncState() {
+    getSyncStatus()
+      .then((s) => {
+        syncState = s.state;
+        syncing = s.state?.status === "running";
+      })
+      .catch(() => {});
+  }
+
+  async function handleSync() {
+    if (syncing) return;
+    syncing = true;
+    try {
+      const state = await runSync(true);
+      if (state) {
+        syncState = state;
+        if (state.status === "success") onGarminSynced();
+      }
+    } catch (err) {
+      syncState = {
+        status: "failed",
+        last_success_at: syncState?.last_success_at ?? null,
+        activities_synced: null,
+        wellness_days_synced: null,
+        error: err instanceof Error ? err.message : "Sync failed",
+      };
+    } finally {
+      syncing = false;
+    }
+  }
+
+  function onGarminConnected() {
+    garminState = "connected";
+    garminEmail = "";
+    garminPassword = "";
+    garminCode = "";
+    // First sync right away, so the plan shows what's been recorded.
+    handleSync();
+  }
 
   async function handleGarminConnect() {
     if (garminBusy) return;
@@ -103,9 +153,7 @@
       if (data.mfaRequired) {
         garminState = "mfa";
       } else {
-        garminState = "connected";
-        garminEmail = "";
-        garminPassword = "";
+        onGarminConnected();
       }
     } catch (err) {
       garminStatus = {
@@ -129,10 +177,7 @@
       });
       const data = await res.json().catch(() => null);
       if (!res.ok) throw new Error(data?.message ?? `Code refuse (${res.status})`);
-      garminState = "connected";
-      garminEmail = "";
-      garminPassword = "";
-      garminCode = "";
+      onGarminConnected();
     } catch (err) {
       garminStatus = {
         message: err instanceof Error ? err.message : "Code refuse.",
@@ -517,9 +562,10 @@
           <h4 class="settings-section-title">Garmin Connect</h4>
           <div class="data-explainer">
             <p>
-              Connect your Garmin account to send workouts from this plan straight to your watch.
-              Your email and password go straight to Garmin's own login - only a session token is
-              kept, never your password.
+              Connect your Garmin account to send workouts from this plan straight to your watch,
+              and to see what you actually recorded next to each planned day (activities, plus
+              sleep, HRV and training readiness). Your email and password go straight to Garmin's
+              own login - only a session token is kept, never your password.
             </p>
           </div>
 
@@ -537,6 +583,29 @@
                 disabled={garminBusy}
               >
                 {garminBusy ? "…" : "Disconnect"}
+              </button>
+            </div>
+
+            <div class="data-action">
+              <div class="data-action-info">
+                <span class="data-action-title">Activity & recovery sync</span>
+                <span class="data-action-desc">
+                  {#if syncing}
+                    Syncing… (the first sync can take a few minutes)
+                  {:else if syncState?.status === "failed"}
+                    <span class="sync-error">Last sync failed: {syncState.error}</span>
+                  {:else if syncState?.last_success_at}
+                    Synced {formatRelativeTime(syncState.last_success_at)} ·
+                    {plural(syncState.activities_synced ?? 0, "activity", "activities")} ·
+                    {plural(syncState.wellness_days_synced ?? 0, "day", "days")} of recovery data
+                  {:else}
+                    Not synced yet.
+                  {/if}
+                </span>
+                <span class="data-action-desc">Runs automatically when you open a plan.</span>
+              </div>
+              <button class="data-btn" onclick={handleSync} disabled={syncing}>
+                {syncing ? "Syncing…" : "Sync now"}
               </button>
             </div>
           {:else if garminState === "mfa"}
@@ -1131,6 +1200,10 @@
     font-size: 0.85rem;
     color: var(--text-muted);
     margin: 0;
+  }
+
+  .sync-error {
+    color: #f87171;
   }
 
   /* Phone: full-screen sheet; tabs scroll sideways instead of wrapping;
