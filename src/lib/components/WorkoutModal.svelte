@@ -26,6 +26,10 @@
     onToggleComplete: (workoutId: string) => void;
     onSave: (updates: Partial<Workout>) => void;
     onDelete: (workoutId: string) => void;
+    // Tap-friendly alternative to dragging a card onto another day, which
+    // doesn't work on touch screens. Bounds limit the date picker to the plan.
+    onMove: (workoutId: string, newDate: string) => void;
+    planDateRange: { min: string; max: string };
   }
 
   let {
@@ -38,11 +42,15 @@
     onToggleComplete,
     onSave,
     onDelete,
+    onMove,
+    planDateRange,
   }: Props = $props();
 
   // Use untrack to explicitly capture initial values (these are intentional local copies)
   let currentMode = $state<Mode>(untrack(() => mode));
   let showDeleteConfirm = $state(false);
+  let showMovePanel = $state(false);
+  let moveDate = $state(untrack(() => day.date));
   let showExportMenu = $state(false);
   let exportStatus = $state<{ message: string; isError: boolean } | null>(null);
 
@@ -254,7 +262,7 @@
             </div>
           {/if}
           {#if displayWorkout.primaryZone}
-            <div class="modal-stat">
+            <div class="modal-stat zone">
               <div class="modal-stat-value">
                 {getZoneInfo(displayWorkout.sport, displayWorkout.primaryZone, settings)}
               </div>
@@ -370,6 +378,27 @@
       {/if}
     </div>
 
+    {#if currentMode === "view" && showMovePanel}
+      <div class="move-panel">
+        <label class="form-label" for="move-date">Move to</label>
+        <input
+          id="move-date"
+          type="date"
+          class="form-input"
+          min={planDateRange.min}
+          max={planDateRange.max}
+          bind:value={moveDate}
+        />
+        <button
+          class="save-btn"
+          disabled={!moveDate || moveDate === day.date}
+          onclick={() => onMove(displayWorkout.id, moveDate)}
+        >
+          Move
+        </button>
+      </div>
+    {/if}
+
     <div class="modal-footer">
       {#if currentMode === "view"}
         <div class="footer-left">
@@ -377,6 +406,17 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
               <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+            </svg>
+          </button>
+          <button
+            class="icon-btn move"
+            class:active={showMovePanel}
+            onclick={() => (showMovePanel = !showMovePanel)}
+            title="Move to another day"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="4" width="18" height="18" rx="2" />
+              <path d="M16 2v4M8 2v4M3 10h18M10 16h6M13 13l3 3-3 3" />
             </svg>
           </button>
           <button class="icon-btn delete" onclick={() => (showDeleteConfirm = true)} title="Delete">
@@ -620,7 +660,8 @@
 
   .modal-stats {
     display: flex;
-    gap: 1.5rem;
+    flex-wrap: wrap;
+    gap: 1rem 1.5rem;
     margin-bottom: 1.5rem;
     padding-bottom: 1.5rem;
     border-bottom: 1px solid var(--border-subtle);
@@ -635,6 +676,17 @@
     font-size: 1.5rem;
     font-weight: 500;
     color: var(--text-primary);
+  }
+
+  /* Zones are often a phrase ("Zone 3 (RP), short touches (158-164 bpm)"),
+   * not a number: give it its own line at reading size. */
+  .modal-stat.zone {
+    flex: 1 1 100%;
+  }
+
+  .modal-stat.zone .modal-stat-value {
+    font-size: 1rem;
+    line-height: 1.4;
   }
 
   .modal-stat-label {
@@ -906,6 +958,93 @@
     display: flex;
     align-items: center;
     gap: 0.75rem;
+  }
+
+  .move-panel {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem 2rem;
+    border-top: 1px solid var(--border-subtle);
+    flex-shrink: 0;
+  }
+
+  .move-panel .form-input {
+    flex: 1;
+    min-width: 0;
+    color-scheme: dark;
+  }
+
+  :global([data-theme="light"]) .move-panel .form-input {
+    color-scheme: light;
+  }
+
+  .icon-btn.move.active,
+  .icon-btn.move:hover {
+    background: var(--bg-elevated);
+    color: var(--text-primary);
+  }
+
+  /* Phone: full-screen sheet, roomier touch targets, footer wraps. */
+  @media (max-width: 800px) {
+    .modal-overlay {
+      padding: 0;
+    }
+
+    .modal {
+      max-width: none;
+      height: 100dvh;
+      max-height: 100dvh;
+      border-radius: 0;
+      border: none;
+    }
+
+    .modal-header,
+    .modal-body {
+      padding: 1rem 1.25rem;
+    }
+
+    .modal-close {
+      width: 44px;
+      height: 44px;
+      flex-shrink: 0;
+    }
+
+    .modal-footer {
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      padding: 0.75rem 1.25rem;
+    }
+
+    .footer-left {
+      flex-wrap: wrap;
+    }
+
+    .footer-right {
+      flex: 1 1 100%;
+      flex-wrap: wrap;
+    }
+
+    .complete-btn,
+    .cancel-btn,
+    .save-btn {
+      flex: 1;
+      justify-content: center;
+    }
+
+    .icon-btn {
+      width: 44px;
+      height: 44px;
+    }
+
+    .move-panel {
+      flex-wrap: wrap;
+      padding: 0.75rem 1.25rem;
+    }
+
+    .move-panel .form-label {
+      flex-basis: 100%;
+    }
   }
 
   .export-dropdown {

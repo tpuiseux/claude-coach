@@ -176,4 +176,44 @@
   li a span {
     color: #a1a1aa;
   }
+
+  @media (max-width: 600px) {
+    main {
+      margin: 1.5rem auto;
+      padding: 0 1rem;
+    }
+
+    header {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .header-actions {
+      flex-wrap: wrap;
+    }
+
+    .header-actions > button,
+    .header-actions form,
+    .header-actions form button {
+      flex: 1;
+    }
+
+    .header-actions form {
+      display: flex;
+      min-width: 0;
+    }
+
+    .header-actions button {
+      min-height: 44px;
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    li a {
+      gap: 1rem;
+      padding: 1.1rem 1.25rem;
+    }
+  }
 </style>

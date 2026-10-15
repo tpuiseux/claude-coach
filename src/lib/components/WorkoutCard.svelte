@@ -104,9 +104,13 @@
     background: var(--rest);
   }
 
-  .workout-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  /* Hover-only: on touch screens :hover sticks after a tap, leaving the
+   * card lifted until you tap elsewhere. */
+  @media (hover: hover) {
+    .workout-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    }
   }
 
   .workout-card.dragging {
@@ -174,5 +178,19 @@
     font-size: 0.7rem;
     color: var(--text-muted);
     margin-top: 0.3rem;
+  }
+
+  @media (max-width: 800px) {
+    .workout-card {
+      padding: 0.7rem 0.85rem;
+    }
+
+    .workout-name {
+      font-size: 0.9rem;
+    }
+
+    .workout-duration {
+      font-size: 0.75rem;
+    }
   }
 </style>

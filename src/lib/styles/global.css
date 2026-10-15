@@ -170,3 +170,23 @@ input:focus,
 select:focus {
   outline: none;
 }
+
+/* iOS Safari zooms the page into any focused field under 16px and never
+ * zooms back out. Component styles set smaller sizes, hence !important. */
+@media (max-width: 800px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}

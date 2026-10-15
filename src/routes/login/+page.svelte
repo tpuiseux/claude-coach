@@ -47,6 +47,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    padding: 1rem;
     background: #0a0a0b;
     color: #fafafa;
     font-family:
@@ -59,7 +60,8 @@
     display: flex;
     flex-direction: column;
     gap: 1rem;
-    width: 320px;
+    width: 100%;
+    max-width: 320px;
     padding: 2rem;
     border: 1px solid #232327;
     border-radius: 12px;

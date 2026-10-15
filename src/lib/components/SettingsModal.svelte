@@ -1132,4 +1132,80 @@
     color: var(--text-muted);
     margin: 0;
   }
+
+  /* Phone: full-screen sheet; tabs scroll sideways instead of wrapping;
+   * zone tables tighten their fixed columns to fit ~360px. */
+  @media (max-width: 800px) {
+    .modal-overlay {
+      padding: 0;
+    }
+
+    .settings-modal {
+      max-width: none;
+      height: 100dvh;
+      max-height: 100dvh;
+      border-radius: 0;
+      border: none;
+    }
+
+    .modal-header {
+      padding: 1rem 1.25rem 0.75rem;
+    }
+
+    .modal-close {
+      width: 44px;
+      height: 44px;
+    }
+
+    .settings-tabs {
+      padding: 0 1.25rem 0.75rem;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+
+    .settings-tabs::-webkit-scrollbar {
+      display: none;
+    }
+
+    .settings-tab {
+      flex-shrink: 0;
+      padding: 0.6rem 1rem;
+    }
+
+    .modal-body {
+      padding: 1rem 1.25rem 2rem;
+    }
+
+    .settings-row {
+      gap: 1rem;
+    }
+
+    .settings-select {
+      min-width: 0;
+      max-width: 55%;
+    }
+
+    .threshold-row {
+      flex-wrap: wrap;
+      gap: 0.6rem 0.75rem;
+    }
+
+    .threshold-label {
+      flex-basis: 100%;
+    }
+
+    .threshold-input {
+      flex: 1;
+      width: auto;
+    }
+
+    .recalc-btn {
+      padding: 0.65rem 1rem;
+    }
+
+    .zone-row {
+      grid-template-columns: 44px 1fr 68px 68px;
+      gap: 0.5rem;
+    }
+  }
 </style>

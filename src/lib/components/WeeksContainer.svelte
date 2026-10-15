@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { afterNavigate } from "$app/navigation";
   import type { TrainingPlan, TrainingDay, Workout } from "../../schema/training-plan.js";
   import WeekCard from "./WeekCard.svelte";
   import { getTodayISO } from "../utils.js";
@@ -14,6 +15,21 @@
   let { plan, filters, onWorkoutClick, onWorkoutMove, onAddWorkout }: Props = $props();
 
   const today = getTodayISO();
+
+  // Open on today rather than week 1 - mid-plan, today is what you came
+  // for, and on a phone week 1 can be dozens of screens away. afterNavigate,
+  // not onMount: SvelteKit resets the scroll to the top once navigation
+  // finishes, which would undo a scroll done any earlier. Instant, not smooth
+  // (global.css sets scroll-behavior: smooth): nobody wants to watch the plan
+  // scroll past on every load. Only on entering the page - not after the
+  // invalidateAll() that follows each edit, which would yank the view away.
+  afterNavigate(({ type }) => {
+    if (type === "enter" || type === "link" || type === "goto") {
+      document
+        .getElementById("today-column")
+        ?.scrollIntoView({ block: "start", behavior: "instant" });
+    }
+  });
 
   function filterWorkout(workout: Workout): boolean {
     if (filters.sport !== "all" && workout.sport !== filters.sport) {
@@ -85,8 +101,10 @@
     background: linear-gradient(135deg, #64748b, #475569); /* fallback */
   }
 
-  .phase-segment:hover {
-    filter: brightness(1.2);
+  @media (hover: hover) {
+    .phase-segment:hover {
+      filter: brightness(1.2);
+    }
   }
 
   .phase-segment:active {
@@ -94,6 +112,10 @@
   }
 
   .phase-label {
+    padding: 0 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
     font-size: 0.65rem;
     font-weight: 600;
     text-transform: uppercase;
@@ -131,5 +153,16 @@
     display: flex;
     flex-direction: column;
     gap: 1.5rem;
+  }
+
+  @media (max-width: 800px) {
+    .phase-timeline {
+      padding: 0;
+      margin-bottom: 1rem;
+    }
+
+    .weeks-container {
+      gap: 1rem;
+    }
   }
 </style>

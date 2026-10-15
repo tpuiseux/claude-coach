@@ -40,6 +40,11 @@
 
   let modalState = $state<ModalState>(null);
 
+  const planDateRange = $derived.by(() => {
+    const dates = (data.plan.weeks ?? []).flatMap((w) => (w.days ?? []).map((d) => d.date)).sort();
+    return { min: dates[0] ?? "", max: dates[dates.length - 1] ?? "" };
+  });
+
   async function request(path: string, init: RequestInit) {
     errorMessage = null;
     try {
@@ -75,6 +80,22 @@
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action: "move", newDate }),
     });
+  }
+
+  async function handleMoveFromModal(workoutId: string, newDate: string) {
+    try {
+      await request(workoutsUrl(workoutId), {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "move", newDate }),
+      });
+    } catch {
+      // request() already put the message in the error banner
+    } finally {
+      // Close even on failure: on a phone the modal is full-screen and would
+      // hide the error banner behind it.
+      modalState = null;
+    }
   }
 
   async function handleToggleComplete(workoutId: string) {
@@ -178,6 +199,8 @@
     onToggleComplete={handleToggleComplete}
     onSave={handleSave}
     onDelete={handleDelete}
+    onMove={handleMoveFromModal}
+    {planDateRange}
   />
 {/if}
 
@@ -196,6 +219,17 @@
     margin-left: var(--sidebar-width);
     padding: 2rem;
     max-width: 1400px;
+  }
+
+  @media (max-width: 800px) {
+    .app {
+      display: block;
+    }
+
+    .main-content {
+      margin-left: 0;
+      padding: 1rem 0.75rem 2rem;
+    }
   }
 
   .error-banner {

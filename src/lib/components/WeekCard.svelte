@@ -76,23 +76,25 @@
           <span class="day-date">{parseDate(day.date).getDate()}</span>
         </div>
 
-        {#if filteredWorkouts.length > 0}
-          {#each filteredWorkouts as workout (workout.id)}
-            <WorkoutCard
-              {workout}
-              isCompleted={!!workout.completed}
-              onClick={() => onWorkoutClick(workout, day)}
-            />
-          {/each}
-        {:else if (day.workouts ?? []).length === 0}
-          <div class="empty-day">Rest</div>
-        {/if}
+        <div class="day-content">
+          {#if filteredWorkouts.length > 0}
+            {#each filteredWorkouts as workout (workout.id)}
+              <WorkoutCard
+                {workout}
+                isCompleted={!!workout.completed}
+                onClick={() => onWorkoutClick(workout, day)}
+              />
+            {/each}
+          {:else if (day.workouts ?? []).length === 0}
+            <div class="empty-day">Rest</div>
+          {/if}
 
-        <button class="add-workout-btn" onclick={() => onAddWorkout(day)} title="Add workout">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M12 5v14M5 12h14" />
-          </svg>
-        </button>
+          <button class="add-workout-btn" onclick={() => onAddWorkout(day)} title="Add workout">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 5v14M5 12h14" />
+            </svg>
+          </button>
+        </div>
       </div>
     {/each}
   </div>
@@ -202,6 +204,9 @@
 
   .day-column.today {
     background: var(--bg-tertiary);
+    /* When the page opens on today: keep the week's header in view on
+     * desktop, and clear the sticky top bar on mobile. */
+    scroll-margin-top: 4.5rem;
   }
 
   .day-column.today .day-name {
@@ -234,6 +239,14 @@
     background: var(--accent-glow);
     outline: 2px dashed var(--accent);
     outline-offset: -2px;
+  }
+
+  .day-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    min-width: 0;
   }
 
   .day-header {
@@ -283,14 +296,23 @@
     opacity: 0;
   }
 
-  .day-column:hover .add-workout-btn {
-    opacity: 1;
+  @media (hover: hover) {
+    .day-column:hover .add-workout-btn {
+      opacity: 1;
+    }
+
+    .add-workout-btn:hover {
+      background: var(--bg-elevated);
+      border-color: var(--border-medium);
+      color: var(--text-primary);
+    }
   }
 
-  .add-workout-btn:hover {
-    background: var(--bg-elevated);
-    border-color: var(--border-medium);
-    color: var(--text-primary);
+  /* No hover on touch screens: the add button would be unreachable. */
+  @media (hover: none) {
+    .add-workout-btn {
+      opacity: 1;
+    }
   }
 
   .add-workout-btn svg {
@@ -313,6 +335,97 @@
   @media (max-width: 700px) {
     .days-grid {
       grid-template-columns: 1fr;
+    }
+  }
+
+  /* Phone: one day per row, compact. Day label on the left, workouts on the
+   * right, so a whole week fits on a screen or two instead of seven tall
+   * cards. */
+  @media (max-width: 800px) {
+    .week-card {
+      border-radius: 12px;
+    }
+
+    .week-header {
+      flex-wrap: wrap;
+      gap: 0.25rem 0.75rem;
+      padding: 0.75rem 1rem;
+    }
+
+    .week-title {
+      flex-wrap: wrap;
+      gap: 0.25rem 0.6rem;
+      min-width: 0;
+    }
+
+    .week-focus {
+      flex-basis: 100%;
+      font-size: 0.8rem;
+      line-height: 1.4;
+    }
+
+    .days-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .day-column {
+      flex-direction: row;
+      align-items: flex-start;
+      gap: 0.75rem;
+      min-height: 0;
+      padding: 0.75rem 0.75rem 0.75rem 1rem;
+    }
+
+    .day-header {
+      flex: 0 0 3.25rem;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.1rem;
+      margin: 0;
+      padding: 0.35rem 0 0;
+      border-bottom: none;
+    }
+
+    .day-name-group {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.2rem;
+    }
+
+    .day-date {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+    }
+
+    .today-badge {
+      order: 2;
+    }
+
+    .empty-day {
+      justify-content: flex-start;
+      min-height: 2rem;
+    }
+
+    /* A full-width "+" under every day would double the list's height:
+     * tuck it under the date, in the otherwise empty left column. */
+    .day-column {
+      position: relative;
+      min-height: 6.75rem;
+    }
+
+    .day-column.today {
+      min-height: 8.25rem; /* room for the TODAY badge above the "+" */
+    }
+
+    .add-workout-btn {
+      position: absolute;
+      left: 0.75rem;
+      bottom: 0.75rem;
+      width: 2.5rem;
+      height: 2rem;
+      margin: 0;
+      padding: 0;
     }
   }
 </style>
