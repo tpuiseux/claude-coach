@@ -34,7 +34,7 @@
     "check:web": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "prepare": "husky",
+    "prepare": "svelte-kit sync || echo ''; husky",
     "prepublishOnly": "npm run build"
   },
   "lint-staged": {
