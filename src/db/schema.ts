@@ -250,4 +250,61 @@ CREATE TABLE IF NOT EXISTS workout_feedback (
   updated_at TEXT DEFAULT (datetime('now')),
   PRIMARY KEY (user_id, plan_id, workout_id)
 );
+
+-- Coach chat (lib/server/coach/). One conversation at a time per user and
+-- plan; "New conversation" starts another and the old one stays as it was.
+CREATE TABLE IF NOT EXISTS coach_conversations (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  plan_id TEXT NOT NULL,
+  created_at TEXT DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_coach_conversations_plan ON coach_conversations(user_id, plan_id);
+
+-- Every message of a conversation exactly as sent to and received from the
+-- Claude API (content blocks as JSON, thinking and tool calls included).
+-- Append-only: the API checks that earlier turns come back unchanged.
+CREATE TABLE IF NOT EXISTS coach_messages (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  conversation_id INTEGER NOT NULL REFERENCES coach_conversations(id) ON DELETE CASCADE,
+  role TEXT NOT NULL,               -- user, assistant
+  content TEXT NOT NULL,            -- JSON array of content blocks
+  created_at TEXT DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_coach_messages_conversation ON coach_messages(conversation_id, id);
+
+-- Plan changes the coach proposed. Nothing changes until the athlete applies
+-- one; plan_before keeps the plan as it was, so an applied proposal can be
+-- undone.
+CREATE TABLE IF NOT EXISTS coach_proposals (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  conversation_id INTEGER NOT NULL REFERENCES coach_conversations(id) ON DELETE CASCADE,
+  message_id INTEGER NOT NULL,      -- the coach message that proposed it
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  plan_id TEXT NOT NULL,
+  summary TEXT NOT NULL,
+  changes TEXT NOT NULL,            -- JSON: PlanChange[] (lib/coach.ts)
+  status TEXT NOT NULL DEFAULT 'pending', -- pending, applied, rejected, undone
+  plan_before TEXT,                 -- plan JSON just before it was applied
+  applied_version TEXT,             -- the plan's meta.updatedAt right after
+  reported INTEGER NOT NULL DEFAULT 0, -- 1 once the coach was told the outcome
+  created_at TEXT DEFAULT (datetime('now')),
+  resolved_at TEXT
+);
+
+-- Tokens each coach request used, for the daily limit and the bill.
+CREATE TABLE IF NOT EXISTS coach_usage (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  model TEXT NOT NULL,
+  input_tokens INTEGER,
+  output_tokens INTEGER,
+  cache_read_tokens INTEGER,
+  cache_write_tokens INTEGER,
+  created_at TEXT DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_coach_usage_user ON coach_usage(user_id, created_at);
 `;

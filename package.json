@@ -41,6 +41,7 @@
     "*.{js,ts,json,md,html,css,svelte}": "prettier --write"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.135.0",
     "@garmin/fitsdk": "^21.178.0",
     "consola": "^3.2.3",
     "jszip": "^3.10.1",

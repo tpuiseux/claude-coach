@@ -16,6 +16,7 @@
   import WorkoutModal from "$lib/components/WorkoutModal.svelte";
   import ActivityModal from "$lib/components/ActivityModal.svelte";
   import SettingsModal from "$lib/components/SettingsModal.svelte";
+  import CoachPanel from "$lib/components/CoachPanel.svelte";
   import { runSync } from "$lib/garminSyncClient.js";
   import { matchDay, type RecordedActivity } from "$lib/trainingLog.js";
 
@@ -238,6 +239,8 @@
     />
   </main>
 </div>
+
+<CoachPanel planId={page.params.id ?? ""} onPlanChanged={() => invalidateAll()} />
 
 {#if garminSyncing}
   <div class="sync-pill" role="status">Syncing Garmin…</div>
