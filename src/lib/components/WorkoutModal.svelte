@@ -18,6 +18,7 @@
     type WorkoutFeedback,
   } from "../trainingLog.js";
   import { isGarminConnectSupported } from "../garminSports.js";
+  import ActivityAnalysis from "./ActivityAnalysis.svelte";
   import {
     exportWorkout,
     getAvailableFormats,
@@ -314,7 +315,7 @@
   aria-modal="true"
   tabindex="-1"
 >
-  <div class="modal">
+  <div class="modal" class:wide={currentMode === "view" && recordedActivities.length > 0}>
     <div class="modal-header">
       {#if currentMode === "view"}
         <div>
@@ -386,6 +387,7 @@
                 <span class="recorded-row-summary">{formatActivitySummary(activity, settings)}</span
                 >
               </div>
+              <ActivityAnalysis {activity} {settings} />
             {/each}
           </div>
         {/if}
@@ -770,6 +772,11 @@
     position: relative;
     display: flex;
     flex-direction: column;
+  }
+
+  /* Room for the recorded activity's charts. */
+  .modal.wide {
+    max-width: 760px;
   }
 
   .modal-overlay.active .modal {

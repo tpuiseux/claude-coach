@@ -15,6 +15,7 @@
     onWorkoutClick: (workout: Workout, day: TrainingDay) => void;
     onWorkoutMove: (workoutId: string, newDate: string) => void;
     onAddWorkout: (day: TrainingDay) => void;
+    onActivityClick: (activity: RecordedActivity) => void;
   }
 
   let {
@@ -26,6 +27,7 @@
     onWorkoutClick,
     onWorkoutMove,
     onAddWorkout,
+    onActivityClick,
   }: Props = $props();
 
   const today = getTodayISO();
@@ -89,6 +91,7 @@
         {onWorkoutClick}
         onDrop={onWorkoutMove}
         {onAddWorkout}
+        {onActivityClick}
         animationDelay={index * 0.05}
       />
     </div>

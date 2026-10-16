@@ -1,6 +1,7 @@
 import { all, execute, get, run } from "../../db/client.js";
 import { isGarminConnected } from "./garminCredentials.js";
 import { autoCompleteFromActivities } from "./autoComplete.js";
+import { prefetchActivityDetails } from "./activityDetails.js";
 import {
   fetchGarminActivities,
   fetchGarminWellness,
@@ -30,6 +31,10 @@ const OVERLAP_DAYS = 2;
 // Bridge caps (garmin_bridge.py MAX_*_SYNC_DAYS).
 const MAX_ACTIVITY_DAYS = 120;
 const MAX_WELLNESS_DAYS = 31;
+// Activities whose curves and laps are fetched after each sync (2 Garmin
+// calls each). Covers any normal gap between syncs; a first sync's six
+// weeks of history fill in over the next few.
+const DETAILS_PER_SYNC = 15;
 
 // Whitelists: these names go into SQL as identifiers, so they're never taken
 // from the bridge's response keys.
@@ -189,8 +194,10 @@ function storeActivities(userId: number, rows: BridgeActivityRow[], start: strin
     [userId, start, isoDate(Date.parse(end) + DAY_MS)]
   );
   for (const { id } of existing) {
-    if (!keep.includes(id))
+    if (!keep.includes(id)) {
       run("DELETE FROM activities WHERE id = ? AND user_id = ?", [id, userId]);
+      run("DELETE FROM activity_details WHERE activity_id = ? AND user_id = ?", [id, userId]);
+    }
   }
   return stored;
 }
@@ -261,6 +268,17 @@ async function runSync(userId: number, previous: GarminSyncState | null): Promis
        WHERE user_id = ?`,
       [err instanceof Error ? err.message : String(err), userId]
     );
+    runningSyncs.delete(userId);
+    return;
+  }
+
+  // After the sync is reported done, so the page refreshes without waiting
+  // on these. Still counts as running: no second sync starts meanwhile.
+  try {
+    await prefetchActivityDetails(userId, DETAILS_PER_SYNC);
+  } catch (err) {
+    // Opening an activity fetches its details anyway.
+    console.error(`[garmin-sync] activity details prefetch failed for user ${userId}:`, err);
   } finally {
     runningSyncs.delete(userId);
   }

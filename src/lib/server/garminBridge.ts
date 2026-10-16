@@ -113,3 +113,18 @@ export async function fetchGarminWellness(userId: number, start: string, end: st
     body: JSON.stringify({ userId, start, end }),
   });
 }
+
+/** One activity's samples and laps (garmin_bridge.py activity_details). */
+export interface BridgeActivityDetails {
+  series: Record<string, (number | null)[]>;
+  laps: Record<string, unknown>[];
+  /** False while Garmin is still processing the upload - don't cache it. */
+  complete: boolean;
+}
+
+export async function fetchGarminActivityDetails(userId: number, activityId: number) {
+  return callBridge<BridgeActivityDetails>("/garmin/activity-details", {
+    method: "POST",
+    body: JSON.stringify({ userId, activityId }),
+  });
+}

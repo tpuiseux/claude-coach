@@ -14,9 +14,10 @@
   import Sidebar from "$lib/components/Sidebar.svelte";
   import WeeksContainer from "$lib/components/WeeksContainer.svelte";
   import WorkoutModal from "$lib/components/WorkoutModal.svelte";
+  import ActivityModal from "$lib/components/ActivityModal.svelte";
   import SettingsModal from "$lib/components/SettingsModal.svelte";
   import { runSync } from "$lib/garminSyncClient.js";
-  import { matchDay } from "$lib/trainingLog.js";
+  import { matchDay, type RecordedActivity } from "$lib/trainingLog.js";
 
   interface Props {
     data: PageData;
@@ -42,6 +43,8 @@
     | null;
 
   let modalState = $state<ModalState>(null);
+  // An activity that matched nothing in the plan, opened for its details.
+  let openActivity = $state<RecordedActivity | null>(null);
 
   // Pull new Garmin activities/recovery data when the plan is opened. The
   // server skips this if the last sync is under 6h old or Garmin isn't
@@ -229,6 +232,7 @@
       onWorkoutClick={handleWorkoutClick}
       onWorkoutMove={handleWorkoutMove}
       onAddWorkout={handleAddWorkout}
+      onActivityClick={(activity) => (openActivity = activity)}
     />
   </main>
 </div>
@@ -258,6 +262,10 @@
     onSaveFeedback={handleSaveFeedback}
     onDeleteFeedback={handleDeleteFeedback}
   />
+{/if}
+
+{#if openActivity}
+  <ActivityModal activity={openActivity} {settings} onClose={() => (openActivity = null)} />
 {/if}
 
 {#if settingsOpen}

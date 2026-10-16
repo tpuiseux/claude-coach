@@ -12,6 +12,8 @@ const bridge = vi.hoisted(() => ({
 vi.mock("../../src/lib/server/garminBridge.js", () => ({
   fetchGarminActivities: bridge.activities,
   fetchGarminWellness: bridge.wellness,
+  // Curves and laps fetched after each sync - covered in activityDetails.test.ts.
+  fetchGarminActivityDetails: async () => ({ ok: false, status: 503, message: "not in this test" }),
 }));
 
 function activity(id: number, local: string, extra: Record<string, unknown> = {}) {

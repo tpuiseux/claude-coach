@@ -121,6 +121,83 @@ def wellness_for_range(garmin, start: date, end: date) -> list[dict]:
     return rows
 
 
+# Samples asked of Garmin per activity: enough for a smooth curve across a
+# phone-to-desktop wide chart, a fraction of a long ride's full recording.
+DETAIL_MAX_SAMPLES = 1000
+
+# Garmin metric key -> series name returned to the web app. Location
+# (latitude/longitude) is deliberately left out: the charts don't need it,
+# and it shouldn't be stored for nothing.
+DETAIL_SERIES = {
+    "sumDuration": "time",  # s since start, pauses excluded
+    "sumDistance": "distance",  # m
+    "directSpeed": "speed",  # m/s
+    "directHeartRate": "heartrate",  # bpm
+    "directElevation": "altitude",  # m
+    "directDoubleCadence": "cadence",  # steps/min (running) - single-leg is directRunCadence
+    "directBikeCadence": "cadence",  # rpm
+    "directPower": "power",  # W
+}
+
+# Lap fields kept per lap (Garmin lapDTOs key -> returned key).
+LAP_FIELDS = {
+    "distance": "distance",
+    "duration": "duration",
+    "movingDuration": "movingDuration",
+    "averageSpeed": "averageSpeed",
+    "averageHR": "averageHR",
+    "maxHR": "maxHR",
+    "averageRunCadence": "averageCadence",
+    "averageBikeCadence": "averageCadence",
+    "averagePower": "averagePower",
+    "elevationGain": "elevationGain",
+    "intensityType": "intensityType",
+}
+
+
+def activity_details(garmin, activity_id: int) -> dict:
+    """Time series and laps of one activity, trimmed to what the plan view charts.
+
+    {"series": {name: [values]}, "laps": [...], "complete": bool} - every
+    series has one entry per sample (None where the device recorded nothing).
+    "complete" is False while Garmin is still processing the upload, so the
+    web app knows not to cache a partial answer.
+    """
+    details = call_with_retry(
+        garmin.get_activity_details, str(activity_id), DETAIL_MAX_SAMPLES, 0, label="activity details"
+    )
+    splits = call_with_retry(garmin.get_activity_splits, str(activity_id), label="activity splits")
+
+    index = {}
+    for desc in details.get("metricDescriptors") or []:
+        name = DETAIL_SERIES.get(desc.get("key"))
+        # Running watches report both cadences; the first one listed wins
+        # only if the preferred double cadence is absent.
+        if name and (name not in index or desc.get("key") == "directDoubleCadence"):
+            index[name] = desc.get("metricsIndex")
+
+    series: dict[str, list] = {name: [] for name in index}
+    for sample in details.get("activityDetailMetrics") or []:
+        metrics = sample.get("metrics") or []
+        for name, i in index.items():
+            value = metrics[i] if i is not None and i < len(metrics) else None
+            series[name].append(round(value, 2) if isinstance(value, (int, float)) else None)
+    # Drop series the device never filled (e.g. power without a pod).
+    series = {k: v for k, v in series.items() if any(x is not None for x in v)}
+
+    laps = []
+    for lap in (splits or {}).get("lapDTOs") or []:
+        row = {}
+        for src, dst in LAP_FIELDS.items():
+            if lap.get(src) is not None and dst not in row:
+                value = lap[src]
+                row[dst] = round(value, 3) if isinstance(value, float) else value
+        laps.append(row)
+
+    complete = bool(details.get("detailsAvailable", True)) and not details.get("pendingData")
+    return {"series": series, "laps": laps, "complete": complete}
+
+
 def is_valid_user_id(value: str) -> bool:
     return value.isdigit() and value != "0"
 
@@ -297,6 +374,9 @@ def make_handler(api, dry_run, token, allowed_origins, multiuser_dir: Path):
                 return
             if self.path == "/garmin/wellness":
                 self._handle_garmin_sync("wellness")
+                return
+            if self.path == "/garmin/activity-details":
+                self._handle_garmin_activity_details()
                 return
 
             self._json(404, {"error": "not found"})
@@ -607,6 +687,41 @@ def make_handler(api, dry_run, token, allowed_origins, multiuser_dir: Path):
             except Exception as e:
                 log_garmin_error(kind, user_id, e)
                 self._json(502, {"error": f"Synchronisation Garmin impossible: {e}"})
+
+        def _handle_garmin_activity_details(self) -> None:
+            """POST /garmin/activity-details {userId, activityId} - one activity's
+            samples and laps. Read-only towards Garmin; the web app caches them."""
+            if not is_authorized(self.headers):
+                self._json(401, {"error": "unauthorized"})
+                return
+
+            body = self._read_json_body()
+            if body is None:
+                self._json(400, {"error": "invalid JSON body"})
+                return
+
+            user_id = str(body.get("userId", ""))
+            activity_id = body.get("activityId")
+            if not is_valid_user_id(user_id) or not isinstance(activity_id, int) or activity_id <= 0:
+                self._json(400, {"error": "userId and activityId are required"})
+                return
+
+            if dry_run:
+                self._json(200, {"series": {}, "laps": [], "complete": True})
+                return
+
+            garmin = self._user_session(user_id)
+            if garmin is None:
+                return
+
+            try:
+                self._json(200, activity_details(garmin, activity_id))
+            except GarminConnectTooManyRequestsError as e:
+                log_garmin_error("activity-details", user_id, e)
+                self._json(429, {"error": "Garmin limite les requetes - reessaie plus tard."})
+            except Exception as e:
+                log_garmin_error("activity-details", user_id, e)
+                self._json(502, {"error": f"Details Garmin indisponibles: {e}"})
 
         def log_message(self, format: str, *args) -> None:  # noqa: A002 - matches base signature
             print("[garmin-bridge]", format % args)

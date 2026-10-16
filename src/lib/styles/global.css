@@ -49,6 +49,9 @@
   --rest: #52525b;
   --rest-glow: rgba(82, 82, 91, 0.15);
 
+  /* Heart rate (activity analysis charts) */
+  --hr: #f43f5e;
+
   /* Accent */
   --accent: #eab308;
   --accent-glow: rgba(234, 179, 8, 0.2);
@@ -109,6 +112,8 @@
 
   --rest: #71717a;
   --rest-glow: rgba(113, 113, 122, 0.1);
+
+  --hr: #e11d48;
 
   /* Accent - darker for light mode */
   --accent: #ca8a04;

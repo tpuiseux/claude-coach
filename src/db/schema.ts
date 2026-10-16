@@ -217,6 +217,23 @@ CREATE TABLE IF NOT EXISTS workout_auto_completions (
   PRIMARY KEY (user_id, plan_id, workout_id)
 );
 
+-- Per-activity samples (pace, heart rate, altitude... over the session) and
+-- laps (lib/server/activityDetails.ts). Fetched from Garmin right after each
+-- sync for activities not stored yet (a few per sync, newest first), and on
+-- demand when the athlete opens one that hasn't been fetched. \`data\` is the
+-- bridge's JSON (garmin_bridge.py activity_details), location left out.
+-- complete = 0 while Garmin was still processing the upload (or the fetch
+-- failed): it's fetched again, up to a few attempts, so one activity Garmin
+-- can't serve doesn't hold up the others for good.
+CREATE TABLE IF NOT EXISTS activity_details (
+  activity_id INTEGER PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  data TEXT,
+  complete INTEGER NOT NULL DEFAULT 0,
+  attempts INTEGER NOT NULL DEFAULT 0,
+  fetched_at TEXT DEFAULT (datetime('now'))
+);
+
 -- How a workout actually felt, as reported by the athlete. Kept apart from
 -- the plan JSON on purpose: re-importing a plan replaces the whole JSON, and
 -- feedback must survive that. Keyed by the workout's id within its plan.

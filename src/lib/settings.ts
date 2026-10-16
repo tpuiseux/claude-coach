@@ -11,6 +11,9 @@ import type { TrainingPlan, AthleteZones, UnitPreferences } from "../schema/trai
 
 export interface HrZone {
   zone: number;
+  /** The plan's own zone id when it isn't a plain number ("5a", "5b"),
+   * which `zone` can't hold. */
+  label?: string;
   name: string;
   low: number;
   high: number;
@@ -138,6 +141,7 @@ export function deriveSettingsFromPlan(plan: TrainingPlan): Settings {
     if (zones.run.hr.zones) {
       settings.run.hrZones = zones.run.hr.zones.map((z) => ({
         zone: Number(z.zone),
+        label: String(z.zone),
         name: z.name,
         low: z.hrLow,
         high: z.hrHigh ?? 0,
@@ -160,6 +164,7 @@ export function deriveSettingsFromPlan(plan: TrainingPlan): Settings {
     if (zones.bike.hr.zones) {
       settings.bike.hrZones = zones.bike.hr.zones.map((z) => ({
         zone: Number(z.zone),
+        label: String(z.zone),
         name: z.name,
         low: z.hrLow,
         high: z.hrHigh ?? 0,

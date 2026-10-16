@@ -15,6 +15,7 @@
     onWorkoutClick: (workout: Workout, day: TrainingDay) => void;
     onDrop: (workoutId: string, newDate: string) => void;
     onAddWorkout: (day: TrainingDay) => void;
+    onActivityClick: (activity: RecordedActivity) => void;
     animationDelay: number;
   }
 
@@ -28,6 +29,7 @@
     onWorkoutClick,
     onDrop,
     onAddWorkout,
+    onActivityClick,
     animationDelay,
   }: Props = $props();
 
@@ -111,11 +113,15 @@
           {/if}
 
           {#each recorded.unplanned as activity (activity.id)}
-            <div class="recorded-activity" title={activity.name ?? ""}>
+            <button
+              class="recorded-activity"
+              title={activity.name ?? ""}
+              onclick={() => onActivityClick(activity)}
+            >
               <span class="recorded-label">Not in plan</span>
               <span class="recorded-name">{activity.name ?? activity.sportType}</span>
               <span class="recorded-summary">{formatActivitySummary(activity, settings)}</span>
-            </div>
+            </button>
           {/each}
 
           <button class="add-workout-btn" onclick={() => onAddWorkout(day)} title="Add workout">
@@ -292,6 +298,16 @@
     font-size: 0.7rem;
     line-height: 1.35;
     color: var(--text-secondary);
+    background: none;
+    font-family: inherit;
+    text-align: left;
+    width: 100%;
+    cursor: pointer;
+    transition: border-color var(--transition-fast);
+  }
+
+  .recorded-activity:hover {
+    border-color: var(--accent);
   }
 
   .recorded-label {
