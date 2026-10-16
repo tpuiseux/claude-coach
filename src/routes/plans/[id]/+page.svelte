@@ -44,6 +44,8 @@
     | null;
 
   let modalState = $state<ModalState>(null);
+  // A message to start the coach chat with (from a week's "Review with coach").
+  let coachRequest = $state<{ id: number; text: string } | null>(null);
   // An activity that matched nothing in the plan, opened for its details.
   let openActivity = $state<RecordedActivity | null>(null);
 
@@ -236,11 +238,21 @@
       onWorkoutMove={handleWorkoutMove}
       onAddWorkout={handleAddWorkout}
       onActivityClick={(activity) => (openActivity = activity)}
+      weekReviews={data.weekReviews}
+      onReviewWeek={(week) =>
+        (coachRequest = {
+          id: Date.now(),
+          text: `Let's go over week ${week.weekNumber} (${week.startDate} to ${week.endDate}).`,
+        })}
     />
   </main>
 </div>
 
-<CoachPanel planId={page.params.id ?? ""} onPlanChanged={() => invalidateAll()} />
+<CoachPanel
+  planId={page.params.id ?? ""}
+  request={coachRequest}
+  onPlanChanged={() => invalidateAll()}
+/>
 
 {#if garminSyncing}
   <div class="sync-pill" role="status">Syncing Garmin…</div>
@@ -287,7 +299,7 @@
   .main-content {
     flex: 1;
     margin-left: var(--sidebar-width);
-    padding: 2rem;
+    padding: 2rem 2rem 5rem; /* room for the Coach button */
     max-width: 1400px;
   }
 
@@ -298,7 +310,7 @@
 
     .main-content {
       margin-left: 0;
-      padding: 1rem 0.75rem 2rem;
+      padding: 1rem 0.75rem 5rem;
     }
   }
 

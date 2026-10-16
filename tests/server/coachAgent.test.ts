@@ -273,6 +273,38 @@ describe("coach turn", () => {
     });
   });
 
+  it("saves its note on a week, shown under the week", async () => {
+    api.replies.push(
+      reply("tool_use", [
+        {
+          type: "tool_use",
+          id: "n1",
+          name: "save_week_review",
+          input: { weekNumber: 1, summary: "Bonne semaine.", focus: "Dormir plus." },
+        },
+        {
+          type: "tool_use",
+          id: "n2",
+          name: "save_week_review",
+          input: { weekNumber: 9, summary: "x", focus: "" },
+        },
+      ]),
+      reply("end_turn", [{ type: "text", text: "Noted." }])
+    );
+    await turn("Bilan de la semaine 1");
+    const results = (api.requests[1].messages as { content: Record<string, unknown>[] }[]).at(
+      -1
+    )!.content;
+    expect(results[0]).toMatchObject({ tool_use_id: "n1", content: '{"saved":true}' });
+    expect(results[1]).toMatchObject({ tool_use_id: "n2", is_error: true });
+
+    const { weekNotes } = await import("../../src/lib/server/weekReview.js");
+    expect(weekNotes(userId, "race")[1]).toMatchObject({
+      summary: "Bonne semaine.",
+      focus: "Dormir plus.",
+    });
+  });
+
   it("starts a fresh conversation on request", async () => {
     const { conversationView, newConversation } =
       await import("../../src/lib/server/coach/store.js");

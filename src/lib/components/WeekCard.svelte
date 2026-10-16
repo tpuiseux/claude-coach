@@ -3,7 +3,9 @@
   import { matchDay, type RecordedActivity, type WorkoutFeedback } from "../trainingLog.js";
   import type { Settings } from "../settings.js";
   import WorkoutCard from "./WorkoutCard.svelte";
-  import { formatActivitySummary, parseDate } from "../utils.js";
+  import { formatActivitySummary, formatDistance, formatDuration, parseDate } from "../utils.js";
+  import type { WeekReview } from "../weekReview.js";
+  import { formatSpeed, speedDisplay } from "../activityAnalysis.js";
 
   interface Props {
     week: TrainingWeek;
@@ -16,6 +18,9 @@
     onDrop: (workoutId: string, newDate: string) => void;
     onAddWorkout: (day: TrainingDay) => void;
     onActivityClick: (activity: RecordedActivity) => void;
+    /** Plan vs actual, once the week has started. */
+    review?: WeekReview;
+    onReview: () => void;
     animationDelay: number;
   }
 
@@ -30,8 +35,12 @@
     onDrop,
     onAddWorkout,
     onActivityClick,
+    review,
+    onReview,
     animationDelay,
   }: Props = $props();
+
+  let noteOpen = $state(false);
 
   let dragOverDate = $state<string | null>(null);
 
@@ -65,6 +74,68 @@
     </div>
     <div class="week-hours"><span>{week.targetHours ?? 0}</span> hrs</div>
   </div>
+
+  {#if review}
+    <div class="review" class:in-progress={review.inProgress}>
+      <div class="review-stats">
+        <span title="Sessions done / planned{review.inProgress ? ' so far' : ''}"
+          >{review.sessions.done}/{review.sessions.planned} sessions</span
+        >
+        <span title="Time recorded / planned"
+          >{formatDuration(review.minutes.actual) || "0m"} / {formatDuration(
+            review.minutes.planned
+          ) || "0m"}</span
+        >
+        {#if review.runKm.actual > 0 || review.runKm.planned}
+          <span title="Running distance recorded{review.runKm.planned ? ' / planned' : ''}"
+            >{formatDistance(review.runKm.actual * 1000, "run", settings) || "0km"}{review.runKm
+              .planned
+              ? ` / ${formatDistance(review.runKm.planned * 1000, "run", settings)}`
+              : ""} run</span
+          >
+        {/if}
+        {#if review.easyRuns?.pace}
+          <span title="Easy, long and recovery runs: average pace and heart rate"
+            >Easy {formatSpeed(1000 / review.easyRuns.pace, speedDisplay("run", settings))}{review
+              .easyRuns.heartrate
+              ? ` · ${Math.round(review.easyRuns.heartrate)} bpm`
+              : ""}</span
+          >
+        {/if}
+        {#if review.feedback.averageRpe}
+          <span title="Average effort reported (RPE)"
+            >RPE {review.feedback.averageRpe.toFixed(1)}</span
+          >
+        {/if}
+        {#if review.recovery?.sleepScore}
+          <span title="Average sleep score">Sleep {Math.round(review.recovery.sleepScore)}</span>
+        {/if}
+        {#each review.flags as flag (flag.text)}
+          <span class="flag {flag.level}">{flag.level === "warning" ? "⚠ " : ""}{flag.text}</span>
+        {/each}
+      </div>
+      <div class="review-actions">
+        {#if review.coachNote}
+          <button
+            class="note-toggle"
+            onclick={() => (noteOpen = !noteOpen)}
+            aria-expanded={noteOpen}
+          >
+            Coach's note
+          </button>
+        {/if}
+        <button class="review-btn" onclick={onReview}>Review with coach</button>
+      </div>
+      {#if review.coachNote && noteOpen}
+        <div class="coach-note">
+          <p>{review.coachNote.summary}</p>
+          {#if review.coachNote.focus}
+            <p><strong>Focus:</strong> {review.coachNote.focus}</p>
+          {/if}
+        </div>
+      {/if}
+    </div>
+  {/if}
 
   <div class="days-grid">
     {#each week.days ?? [] as day (day.date)}
@@ -218,6 +289,66 @@
   .week-hours span {
     color: var(--text-primary);
     font-weight: 500;
+  }
+
+  .review {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem 1rem;
+    padding: 0.6rem 1.5rem;
+    border-bottom: 1px solid var(--border-subtle);
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+  }
+
+  .review-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem 1rem;
+  }
+
+  .flag.warning {
+    color: var(--accent);
+  }
+
+  .flag.info {
+    color: var(--text-muted);
+  }
+
+  .review-actions {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .review-btn,
+  .note-toggle {
+    padding: 0.3rem 0.7rem;
+    border-radius: 999px;
+    border: 1px solid var(--border-medium);
+    background: transparent;
+    color: var(--text-primary);
+    font-size: 0.75rem;
+    white-space: nowrap;
+  }
+
+  .review-btn:hover,
+  .note-toggle:hover {
+    background: var(--bg-tertiary);
+  }
+
+  .coach-note {
+    flex-basis: 100%;
+    padding: 0.6rem 0.8rem;
+    border-radius: 8px;
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+    line-height: 1.45;
+  }
+
+  .coach-note p + p {
+    margin-top: 0.35rem;
   }
 
   .days-grid {
@@ -444,6 +575,19 @@
       flex-basis: 100%;
       font-size: 0.8rem;
       line-height: 1.4;
+    }
+
+    .review {
+      padding: 0.6rem 1rem;
+    }
+
+    .review-actions {
+      flex-basis: 100%;
+    }
+
+    .review-btn,
+    .note-toggle {
+      min-height: 36px;
     }
 
     .days-grid {

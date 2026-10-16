@@ -294,6 +294,18 @@ CREATE TABLE IF NOT EXISTS coach_proposals (
   resolved_at TEXT
 );
 
+-- The coach's note on a week, saved at the end of a weekly check-in and
+-- shown under that week - what the next check-in picks up from.
+CREATE TABLE IF NOT EXISTS coach_week_notes (
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  plan_id TEXT NOT NULL,
+  week_number INTEGER NOT NULL,
+  summary TEXT NOT NULL,
+  focus TEXT NOT NULL,
+  updated_at TEXT DEFAULT (datetime('now')),
+  PRIMARY KEY (user_id, plan_id, week_number)
+);
+
 -- Tokens each coach request used, for the daily limit and the bill.
 CREATE TABLE IF NOT EXISTS coach_usage (
   id INTEGER PRIMARY KEY AUTOINCREMENT,

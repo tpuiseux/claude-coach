@@ -13,11 +13,13 @@
 
   interface Props {
     planId: string;
+    /** Opens the chat with this message ready to send (a new id each time). */
+    request?: { id: number; text: string } | null;
     /** After a proposal is applied or undone - the page reloads the plan. */
     onPlanChanged: () => Promise<void> | void;
   }
 
-  let { planId, onPlanChanged }: Props = $props();
+  let { planId, request = null, onPlanChanged }: Props = $props();
 
   let open = $state(false);
   let loaded = $state(false);
@@ -56,6 +58,15 @@
       errorText = err instanceof Error ? err.message : "Couldn't load the conversation.";
     }
   }
+
+  let lastRequest = 0;
+  $effect(() => {
+    if (!request || request.id === lastRequest) return;
+    lastRequest = request.id;
+    draft = request.text;
+    if (!open) toggle();
+    else tick().then(() => inputEl?.focus());
+  });
 
   async function toggle() {
     open = !open;

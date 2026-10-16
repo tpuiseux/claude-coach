@@ -11,6 +11,7 @@ import { getFeedbackForPlan } from "../feedback.js";
 import { loadPlanForUser } from "../plans.js";
 import { getRacePrediction } from "../racePrediction.js";
 import { isIsoDate, ValidationError } from "../validation.js";
+import { getWeekReviews, saveWeekNote } from "../weekReview.js";
 import { applyPlanChanges, parsePlanChanges } from "./changes.js";
 import { createProposal } from "./store.js";
 
@@ -51,7 +52,7 @@ export const COACH_TOOLS: Tool[] = [
   {
     name: "get_week",
     description:
-      "One week of the plan in full: every workout (id, content, structure, done or not), what was actually recorded on Garmin each day and which workout it matched, and the athlete's feedback (RPE, feeling, pain). Give a week number or any date in the week.",
+      "One week of the plan in full: every workout (id, content, structure, done or not), what was actually recorded on Garmin each day and which workout it matched, the athlete's feedback (RPE, feeling, pain), the app's review of the week once it has started (sessions done and missed, volume, easy-run pace and heart rate, recovery averages, warning flags) and your note from the last check-in on it. Give a week number or any date in the week.",
     input_schema: {
       type: "object",
       properties: {
@@ -89,6 +90,25 @@ export const COACH_TOOLS: Tool[] = [
     description:
       "The app's predicted finish time for the race, the estimates it averages (best recent effort, pace at race heart rate, training volume, Garmin VO2max) and how it moved week by week.",
     input_schema: noInput,
+  },
+  {
+    name: "save_week_review",
+    description:
+      "Save your note on a week at the end of a weekly check-in: shown to the athlete under that week, and returned by get_week so the next check-in can follow up. Replaces any earlier note on the same week. Write it in the athlete's language.",
+    input_schema: {
+      type: "object",
+      properties: {
+        weekNumber: { type: "integer" },
+        summary: {
+          type: "string",
+          description:
+            "2-4 sentences: how the week went against the plan, what the athlete said, recovery if it mattered, adjustments made or declined",
+        },
+        focus: { type: "string", description: "The one or two things to focus on next week" },
+      },
+      required: ["weekNumber", "summary", "focus"],
+      additionalProperties: false,
+    },
   },
   {
     name: "propose_plan_changes",
@@ -140,6 +160,7 @@ export const TOOL_LABELS: Record<string, string> = {
   get_activity_details: "Analysing a session",
   get_recovery: "Checking your recovery",
   get_race_prediction: "Checking the race prediction",
+  save_week_review: "Saving the week's notes",
   propose_plan_changes: "Preparing changes",
 };
 
@@ -213,8 +234,13 @@ function findWeek(plan: TrainingPlan, input: Record<string, unknown>): TrainingW
 function weekDetail(ctx: ToolContext, plan: TrainingPlan, week: TrainingWeek) {
   const activities = getActivitiesByDate(ctx.userId, week.startDate, week.endDate);
   const feedback = getFeedbackForPlan(ctx.userId, ctx.planId);
+  const review =
+    getWeekReviews(ctx.userId, ctx.planId, { ...plan, weeks: [week] }, activities, feedback)[
+      week.weekNumber
+    ] ?? null;
   return {
     ...week,
+    review,
     days: (week.days ?? []).map((day) => {
       const recorded = activities[day.date] ?? [];
       const match = matchDay(day.workouts ?? [], recorded);
@@ -413,6 +439,19 @@ export async function runCoachTool(
         note: "No prediction: not a running race, or no runs synced yet",
       };
       break;
+    case "save_week_review": {
+      const { weekNumber, summary, focus } = input;
+      const plan = requirePlan(ctx);
+      if (typeof weekNumber !== "number" || !plan.weeks?.some((w) => w.weekNumber === weekNumber)) {
+        throw new ValidationError("No such week in this plan");
+      }
+      if (typeof summary !== "string" || !summary.trim() || typeof focus !== "string") {
+        throw new ValidationError("summary and focus are required");
+      }
+      saveWeekNote(ctx.userId, ctx.planId, weekNumber, summary.trim(), focus.trim());
+      result = { saved: true };
+      break;
+    }
     case "propose_plan_changes":
       result = propose(ctx, input);
       break;

@@ -1,9 +1,15 @@
 <script lang="ts">
   import { afterNavigate } from "$app/navigation";
-  import type { TrainingPlan, TrainingDay, Workout } from "../../schema/training-plan.js";
+  import type {
+    TrainingPlan,
+    TrainingDay,
+    TrainingWeek,
+    Workout,
+  } from "../../schema/training-plan.js";
   import type { RecordedActivity, WorkoutFeedback } from "../trainingLog.js";
   import type { Settings } from "../settings.js";
   import WeekCard from "./WeekCard.svelte";
+  import type { WeekReview } from "../weekReview.js";
   import { getTodayISO } from "../utils.js";
 
   interface Props {
@@ -16,6 +22,8 @@
     onWorkoutMove: (workoutId: string, newDate: string) => void;
     onAddWorkout: (day: TrainingDay) => void;
     onActivityClick: (activity: RecordedActivity) => void;
+    weekReviews: Record<number, WeekReview>;
+    onReviewWeek: (week: TrainingWeek) => void;
   }
 
   let {
@@ -28,6 +36,8 @@
     onWorkoutMove,
     onAddWorkout,
     onActivityClick,
+    weekReviews,
+    onReviewWeek,
   }: Props = $props();
 
   const today = getTodayISO();
@@ -92,6 +102,8 @@
         onDrop={onWorkoutMove}
         {onAddWorkout}
         {onActivityClick}
+        review={weekReviews[week.weekNumber]}
+        onReview={() => onReviewWeek(week)}
         animationDelay={index * 0.05}
       />
     </div>
