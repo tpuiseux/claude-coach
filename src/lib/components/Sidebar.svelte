@@ -2,15 +2,20 @@
   import { base } from "$app/paths";
   import type { TrainingPlan, Sport } from "../../schema/training-plan.js";
   import { formatEventDate, getDaysToEvent, getSportIcon } from "../utils.js";
+  import type { RacePrediction as Prediction } from "../racePrediction.js";
+  import type { Settings } from "../settings.js";
+  import RacePrediction from "./RacePrediction.svelte";
 
   interface Props {
     plan: TrainingPlan;
     filters: { sport: string; status: string };
     onFilterChange: (filters: { sport: string; status: string }) => void;
     onSettingsClick: () => void;
+    prediction: Prediction | null;
+    settings: Settings;
   }
 
-  let { plan, filters, onFilterChange, onSettingsClick }: Props = $props();
+  let { plan, filters, onFilterChange, onSettingsClick, prediction, settings }: Props = $props();
 
   const stats = $derived.by(() => {
     let totalWorkouts = 0;
@@ -166,6 +171,10 @@
       <div class="stat-label">Days Left</div>
     </div>
   </div>
+
+  {#if prediction}
+    <RacePrediction {prediction} {settings} />
+  {/if}
 
   <button class="settings-btn" onclick={openSettings}>
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">

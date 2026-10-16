@@ -3,6 +3,7 @@ import type { PageServerLoad } from "./$types";
 import { loadPlanForUser } from "$lib/server/plans.js";
 import { getActivitiesByDate } from "$lib/server/activities.js";
 import { getFeedbackForPlan } from "$lib/server/feedback.js";
+import { getRacePrediction } from "$lib/server/racePrediction.js";
 
 export const load: PageServerLoad = async ({ params, locals }) => {
   const userId = locals.user!.id;
@@ -15,5 +16,10 @@ export const load: PageServerLoad = async ({ params, locals }) => {
   const activitiesByDate =
     dates.length > 0 ? getActivitiesByDate(userId, dates[0], dates[dates.length - 1]) : {};
 
-  return { plan, activitiesByDate, feedback: getFeedbackForPlan(userId, params.id) };
+  return {
+    plan,
+    activitiesByDate,
+    feedback: getFeedbackForPlan(userId, params.id),
+    prediction: getRacePrediction(userId, plan),
+  };
 };

@@ -217,6 +217,8 @@
     {filters}
     onFilterChange={(f) => (filters = f)}
     onSettingsClick={() => (settingsOpen = true)}
+    prediction={data.prediction}
+    {settings}
   />
 
   <main class="main-content">
