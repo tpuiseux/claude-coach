@@ -17,6 +17,7 @@
   import ActivityModal from "$lib/components/ActivityModal.svelte";
   import SettingsModal from "$lib/components/SettingsModal.svelte";
   import CoachPanel from "$lib/components/CoachPanel.svelte";
+  import LoadPanel from "$lib/components/LoadPanel.svelte";
   import { runSync } from "$lib/garminSyncClient.js";
   import { matchDay, type RecordedActivity } from "$lib/trainingLog.js";
 
@@ -227,6 +228,13 @@
   <main class="main-content">
     {#if errorMessage}
       <div class="error-banner">{errorMessage}</div>
+    {/if}
+    {#if data.load}
+      <LoadPanel
+        load={data.load}
+        planStartDate={data.plan.meta.planStartDate}
+        onAskCoach={(text) => (coachRequest = { id: Date.now(), text })}
+      />
     {/if}
     <WeeksContainer
       plan={data.plan}

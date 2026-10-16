@@ -5,6 +5,7 @@ import { getActivitiesByDate } from "$lib/server/activities.js";
 import { getFeedbackForPlan } from "$lib/server/feedback.js";
 import { getRacePrediction } from "$lib/server/racePrediction.js";
 import { getWeekReviews } from "$lib/server/weekReview.js";
+import { getLoadSeries } from "$lib/server/load.js";
 
 export const load: PageServerLoad = async ({ params, locals }) => {
   const userId = locals.user!.id;
@@ -24,5 +25,6 @@ export const load: PageServerLoad = async ({ params, locals }) => {
     feedback,
     prediction: getRacePrediction(userId, plan),
     weekReviews: getWeekReviews(userId, params.id, plan, activitiesByDate, feedback),
+    load: getLoadSeries(userId, plan),
   };
 };
