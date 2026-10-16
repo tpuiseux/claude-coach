@@ -314,8 +314,8 @@
     );
   }
 
-  function zoneLabel(zone: HrZone, i: number): string {
-    return `Z${zone.label ?? (Number.isFinite(zone.zone) ? zone.zone : i + 1)}`;
+  function zoneLabel(zone: HrZone): string {
+    return `Z${zone.zone}`;
   }
 
   /** HR zone bands visible in the heart-rate panel's range. */
@@ -324,7 +324,7 @@
     return hrZones
       .map((z, i) => ({
         index: i,
-        label: zoneLabel(z, i),
+        label: zoneLabel(z),
         // From the previous zone's top, so bands meet even where the plan's
         // bounds leave a 1 bpm gap (142 / 143).
         low: Math.max(lo, i === 0 ? lo : hrZones[i - 1].high),
@@ -627,7 +627,7 @@
             {@const pct = (zoneSeconds[i] / zoneTotal) * 100}
             <div class="zone-row">
               <span class="zone-name"
-                >{zoneLabel(zone, i)} <span class="zone-sub">{zone.name}</span></span
+                >{zoneLabel(zone)} <span class="zone-sub">{zone.name}</span></span
               >
               <span class="zone-bar-track">
                 <span

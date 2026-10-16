@@ -189,7 +189,7 @@ export interface TrainingWeek {
 export interface HeartRateZones {
   lthr: number; // Lactate threshold HR
   zones: {
-    zone: number;
+    zone: number | string; // 1-5, or a split zone such as 5a / 5b
     name: string;
     percentLow: number;
     percentHigh: number;

@@ -325,7 +325,7 @@
             </div>
             {#each localSettings.run.hrZones as zone, i (i)}
               <div class="zone-row">
-                <span class="zone-badge z{zone.zone}">Z{zone.zone}</span>
+                <span class="zone-badge z{String(zone.zone).charAt(0)}">Z{zone.zone}</span>
                 <span class="zone-name">{zone.name}</span>
                 <input
                   type="number"
@@ -420,7 +420,7 @@
             </div>
             {#each localSettings.bike.hrZones as zone, i (i)}
               <div class="zone-row">
-                <span class="zone-badge z{zone.zone}">Z{zone.zone}</span>
+                <span class="zone-badge z{String(zone.zone).charAt(0)}">Z{zone.zone}</span>
                 <span class="zone-name">{zone.name}</span>
                 <input
                   type="number"
