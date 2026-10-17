@@ -353,13 +353,15 @@
 
   .days-grid {
     display: grid;
-    grid-template-columns: repeat(7, 1fr);
+    grid-template-columns: repeat(7, minmax(0, 1fr));
     gap: 1px;
     background: var(--border-subtle);
   }
 
   .day-column {
     background: var(--bg-secondary);
+    min-width: 0;
+    overflow-wrap: anywhere;
     min-height: 160px;
     padding: 0.75rem;
     display: flex;
@@ -535,13 +537,13 @@
 
   @media (max-width: 1200px) {
     .days-grid {
-      grid-template-columns: repeat(4, 1fr);
+      grid-template-columns: repeat(4, minmax(0, 1fr));
     }
   }
 
   @media (max-width: 900px) {
     .days-grid {
-      grid-template-columns: repeat(2, 1fr);
+      grid-template-columns: repeat(2, minmax(0, 1fr));
     }
   }
 
