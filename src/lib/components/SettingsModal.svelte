@@ -6,8 +6,7 @@
     type Theme,
     recalculateHrZones,
     recalculatePowerZones,
-    recalculateRunPaceZones,
-    mergeRecalculatedRunPaceZones,
+    rescaleRunPaceZones,
     recalculateSwimPaceZones,
   } from "../settings.js";
   import { getSyncStatus, runSync, type SyncState } from "../garminSyncClient.js";
@@ -59,9 +58,9 @@
   }
 
   function recalcRunPace() {
-    localSettings.run.paceZones = mergeRecalculatedRunPaceZones(
+    localSettings.run.paceZones = rescaleRunPaceZones(
       localSettings.run.paceZones,
-      recalculateRunPaceZones(localSettings.run.thresholdPace)
+      localSettings.run.thresholdPace
     );
     save();
   }

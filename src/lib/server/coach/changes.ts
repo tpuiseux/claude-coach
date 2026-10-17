@@ -88,6 +88,9 @@ function parseStep(input: unknown, where: string): WorkoutStep {
   if (typeof intensity.description === "string") {
     step.intensity.description = intensity.description;
   }
+  if (isFiniteNumber(intensity.thresholdPaceSeconds)) {
+    step.intensity.thresholdPaceSeconds = intensity.thresholdPaceSeconds;
+  }
   if (typeof name === "string") step.name = name;
   if (typeof notes === "string") step.notes = notes;
   return step;
@@ -218,6 +221,29 @@ function snapshot(workout: Workout | CoachWorkoutFields, date: string): WorkoutS
   };
 }
 
+/**
+ * Records, on each pace step with its own bounds, the threshold pace they
+ * were set against - so the export can move them when the athlete's
+ * threshold changes (see IntensityTarget.thresholdPaceSeconds).
+ */
+export function stampPaceReference(
+  structure: StructuredWorkout,
+  thresholdSeconds: number | undefined
+): void {
+  if (!thresholdSeconds) return;
+  const steps = [
+    ...(structure.warmup ?? []),
+    ...structure.main.flatMap((item) => ("repeats" in item ? item.steps : [item])),
+    ...(structure.cooldown ?? []),
+  ];
+  for (const step of steps) {
+    const i = step.intensity;
+    if (i.unit === "pace_zone" && i.valueLow !== undefined && i.valueHigh !== undefined) {
+      i.thresholdPaceSeconds ??= thresholdSeconds;
+    }
+  }
+}
+
 /** Sessions whose point is their intervals: exported without steps, the
  * watch would show one long block instead of the repeats. */
 const QUALITY_TYPES = ["intervals", "tempo", "threshold", "vo2max", "sprint", "hills"];
@@ -267,6 +293,9 @@ function applyOne(plan: TrainingPlan, change: PlanChange): ChangePreview {
       completed: false,
     } as Workout;
     requireSteps(workout);
+    if (workout.structure) {
+      stampPaceReference(workout.structure, plan.zones?.run?.pace?.thresholdPaceSeconds);
+    }
     addWorkout(plan, change.date, workout);
     return {
       op: "add",
@@ -298,6 +327,7 @@ function applyOne(plan: TrainingPlan, change: PlanChange): ChangePreview {
       const { structure, ...updates } = change.updates;
       editWorkout(plan, change.workoutId, updates);
       if (structure) {
+        stampPaceReference(structure, plan.zones?.run?.pace?.thresholdPaceSeconds);
         found.workout.structure = structure;
       } else if (CONTENT_FIELDS.some((f) => f in updates)) {
         delete found.workout.structure;

@@ -6,6 +6,7 @@ import { autoCompleteFromActivities, resetAutoCompletions } from "../autoComplet
 import { errorMessage, getAnthropic } from "../coach/agent.js";
 import { recordUsage } from "../coach/store.js";
 import { checkRange, listActivities } from "../coach/tools.js";
+import { stampPaceReference } from "../coach/changes.js";
 import { importPlanForUser } from "../plans.js";
 import { ValidationError } from "../validation.js";
 import { todayLocal } from "../weekReview.js";
@@ -539,6 +540,13 @@ export function adopt(draft: Draft, athlete: string): string {
     weeks: frames.map((f) => draft.weeks[f.weekNumber]),
     raceStrategy: draft.raceStrategy,
   };
+  for (const w of plan.weeks) {
+    for (const day of w.days) {
+      for (const x of day.workouts) {
+        if (x.structure) stampPaceReference(x.structure, zones.run?.pace?.thresholdPaceSeconds);
+      }
+    }
+  }
   importPlanForUser(draft.userId, plan);
   resetAutoCompletions(draft.userId, id);
   autoCompleteFromActivities(draft.userId, [id]);

@@ -80,6 +80,11 @@ export interface IntensityTarget {
   valueLow?: number; // For ranges: 70-75% FTP
   valueHigh?: number;
   description?: string; // "Zone 2", "Threshold", "Easy"
+  // pace_zone with valueLow/valueHigh: the threshold pace (s/km) those
+  // bounds were set against. A description naming one of the plan's pace
+  // zones follows that zone; other paces ("5K pace") are scaled by how far
+  // the threshold has moved since, so they follow the athlete's settings too.
+  thresholdPaceSeconds?: number;
 }
 
 export interface DurationTarget {

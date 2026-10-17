@@ -7,6 +7,7 @@ import {
   deriveSettingsFromPlan,
   mergeRecalculatedRunPaceZones,
   recalculateRunPaceZones,
+  rescaleRunPaceZones,
 } from "../../src/lib/settings.js";
 import type { TrainingPlan, Workout } from "../../src/schema/training-plan.js";
 
@@ -107,5 +108,56 @@ describe("run pace zone bounds through Settings", () => {
     const step = (buildGarminWorkout(plan, workout) as any).workoutSegments[0].workoutSteps[0];
     expect(step.targetValueOne).toBeCloseTo(1000 / 355, 5); // 5:55/km
     expect(step.targetValueTwo).toBeCloseTo(1000 / 328, 5); // 5:28/km
+  });
+
+  it("Recalculate moves every zone with the threshold, keeping the plan's spacing", () => {
+    const plan = planWithBounds();
+    plan.zones!.run!.pace!.zones.push({
+      zone: "T",
+      name: "Threshold (T)",
+      pace: "4:26/km",
+      paceSeconds: 266,
+    });
+    const settings = deriveSettingsFromPlan(plan);
+    // 4:26 -> 4:16: everything gets 10/266 faster, E and RP included.
+    const zones = rescaleRunPaceZones(settings.run.paceZones, "4:16/km");
+    const byCode = Object.fromEntries(zones.map((z) => [String(z.zone), z.pace]));
+    expect(byCode).toMatchObject({ E: "5:28/km", RP: "4:33/km", T: "4:16/km" });
+    settings.run.thresholdPace = "4:16/km";
+    settings.run.paceZones = zones;
+    const built = buildZonesFromSettings(settings).run!.pace!.zones.find((z) => z.zone === "E")!;
+    expect(built).toMatchObject({ low: "5:41/km", high: "5:15/km" });
+  });
+
+  it("moves a step's own pace bounds with the threshold they were set against", () => {
+    const plan = planWithBounds();
+    plan.zones!.run!.pace!.thresholdPaceSeconds = 255;
+    const workout = {
+      id: "w",
+      sport: "run",
+      type: "intervals",
+      name: "10 x 500 m",
+      description: "",
+      completed: false,
+      structure: {
+        main: [
+          {
+            type: "work",
+            duration: { unit: "meters", value: 500 },
+            intensity: {
+              unit: "pace_zone",
+              value: 0,
+              valueLow: 248,
+              valueHigh: 255,
+              description: "5K pace",
+              thresholdPaceSeconds: 260,
+            },
+          },
+        ],
+      },
+    } as unknown as Workout;
+    const step = (buildGarminWorkout(plan, workout) as any).workoutSegments[0].workoutSteps[0];
+    expect(step.targetValueOne).toBeCloseTo(1000 / (255 * (255 / 260)), 5);
+    expect(step.targetValueTwo).toBeCloseTo(1000 / (248 * (255 / 260)), 5);
   });
 });

@@ -286,6 +286,24 @@ export function mergeRecalculatedRunPaceZones(
   return [...refreshed, ...preserved];
 }
 
+/**
+ * "Recalculate" for run paces: moves every zone by as much as the threshold
+ * moved, keeping the spacing the plan was built with (the coach sets easy,
+ * marathon and interval paces for this athlete, not from fixed factors), and
+ * moving race-specific zones like AM/RP along with fitness too. The current
+ * T zone holds the threshold the zones were set around; without one, falls
+ * back to the generic factors.
+ */
+export function rescaleRunPaceZones(current: PaceZone[], thresholdPace: string): PaceZone[] {
+  const t = current.find((z) => String(z.zone) === "T");
+  const from = t ? paceToSeconds(t.pace) : 0;
+  const to = paceToSeconds(thresholdPace);
+  if (!(from > 0) || !(to > 0)) {
+    return mergeRecalculatedRunPaceZones(current, recalculateRunPaceZones(thresholdPace));
+  }
+  return current.map((z) => ({ ...z, pace: scalePace(z.pace, to / from) }));
+}
+
 export function recalculateSwimPaceZones(css: string): PaceZone[] {
   const cssSeconds = paceToSeconds(css);
   const offsets = [

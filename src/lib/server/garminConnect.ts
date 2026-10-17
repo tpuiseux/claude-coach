@@ -138,10 +138,14 @@ function resolveTarget(
       };
     }
     if (step.intensity.valueLow !== undefined && step.intensity.valueHigh !== undefined) {
+      // Bounds set against an older threshold move with it.
+      const then = step.intensity.thresholdPaceSeconds;
+      const now = plan.zones?.run?.pace?.thresholdPaceSeconds;
+      const ratio = then && now ? now / then : 1;
       return {
         targetType: GARMIN_TARGET_PACE_ZONE,
-        targetValueOne: 1000 / step.intensity.valueHigh, // slower bound -> lower speed
-        targetValueTwo: 1000 / step.intensity.valueLow, // faster bound -> higher speed
+        targetValueOne: 1000 / (step.intensity.valueHigh * ratio), // slower bound -> lower speed
+        targetValueTwo: 1000 / (step.intensity.valueLow * ratio), // faster bound -> higher speed
       };
     }
   }

@@ -32,7 +32,7 @@ Once the athlete confirms, write every week in order with write_week, one call p
 - Progress sensibly from their current volume (no more than ~10% a week, a lighter week every 3-4 weeks), build the long run gradually, keep hard days apart, taper into race day.
 - The race itself is a workout on race day: sport "race", type "race".
 - Durations must add up: durationMinutes is the whole session, warm-up and cool-down included; humanReadable's parts add up to it (count distance-based parts at the prescribed pace); a time-based structure adds up to it too. A week's targetHours is roughly the sum of its sessions.
-- Give every run and race a structure for the Garmin export, like the example below: intensity unit "pace_zone" with valueLow/valueHigh in seconds per km (valueLow the faster bound), and a description naming the zone. Strength and rest workouts need no structure.
+- Give every run and race a structure for the Garmin export, like the example below: intensity unit "pace_zone" with valueLow/valueHigh in seconds per km (valueLow the faster bound). When the pace is one of your pace zones, put exactly its zone code as the description ("E", "T"...): the watch then follows the zone when the athlete changes it later. Strength and rest workouts need no structure.
 - Write the plan's text (names, descriptions, humanReadable, notes, focus, race strategy) in the athlete's language.
 - A tool may refuse a week or point out something worth fixing - fix it and call it again for that same week before moving on.
 Don't write text between tool calls in this step - nobody reads it.
