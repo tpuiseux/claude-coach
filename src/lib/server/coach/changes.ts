@@ -131,7 +131,7 @@ export function parseStructure(input: unknown): StructuredWorkout {
 }
 
 /** The workout fields, validated: the app's own rules plus the structure. */
-function parseFields(input: unknown, isNew: boolean): CoachWorkoutFields {
+export function parseFields(input: unknown, isNew: boolean): CoachWorkoutFields {
   if (!isPlainObject(input)) throw new ValidationError("workout fields must be an object");
   const { structure, ...rest } = input;
   const fields: CoachWorkoutFields = isNew ? parseNewWorkout(rest) : parseWorkoutUpdates(rest);

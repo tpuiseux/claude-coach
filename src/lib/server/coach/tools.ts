@@ -272,7 +272,7 @@ function weekDetail(ctx: ToolContext, plan: TrainingPlan, week: TrainingWeek) {
   };
 }
 
-function checkRange(input: Record<string, unknown>): { start: string; end: string } {
+export function checkRange(input: Record<string, unknown>): { start: string; end: string } {
   const { start, end } = input;
   if (!isIsoDate(start) || !isIsoDate(end))
     throw new ValidationError("start and end must be YYYY-MM-DD");
@@ -282,6 +282,11 @@ function checkRange(input: Record<string, unknown>): { start: string; end: strin
 
 function activitiesBetween(ctx: ToolContext, input: Record<string, unknown>) {
   const { start, end } = checkRange(input);
+  return listActivities(ctx.userId, start, end);
+}
+
+/** The user's recorded activities between two dates (inclusive), any sport. */
+export function listActivities(userId: number, start: string, end: string) {
   const rows = all<{
     id: number;
     name: string | null;
@@ -301,7 +306,7 @@ function activitiesBetween(ctx: ToolContext, input: Record<string, unknown>) {
      WHERE user_id = ? AND COALESCE(start_date_local, start_date) >= ?
        AND COALESCE(start_date_local, start_date) < date(?, '+1 day')
      ORDER BY start`,
-    [ctx.userId, start, end]
+    [userId, start, end]
   );
   return rows.map((r) => {
     let raw: Record<string, unknown> = {};

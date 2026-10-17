@@ -306,6 +306,27 @@ CREATE TABLE IF NOT EXISTS coach_week_notes (
   PRIMARY KEY (user_id, plan_id, week_number)
 );
 
+-- Plans made online (lib/server/planBuilder/): the form, the coach's
+-- assessment, then the weeks as the coach writes them. \`messages\` is the
+-- conversation with the model, append-only like coach_messages, so an
+-- interrupted job can carry on where it stopped.
+CREATE TABLE IF NOT EXISTS plan_drafts (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  status TEXT NOT NULL,             -- assessing, awaiting_confirmation, generating, ready, failed, adopted
+  form TEXT NOT NULL,               -- PlanForm JSON (lib/planDraft.ts)
+  assessment TEXT,                  -- PlanAssessment JSON
+  weeks TEXT NOT NULL DEFAULT '{}', -- written weeks by number, JSON
+  race_strategy TEXT,
+  messages TEXT NOT NULL DEFAULT '[]',
+  error TEXT,
+  plan_id TEXT,                     -- once adopted
+  created_at TEXT DEFAULT (datetime('now')),
+  updated_at TEXT DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_plan_drafts_user ON plan_drafts(user_id, created_at);
+
 -- Tokens each coach request used, for the daily limit and the bill.
 CREATE TABLE IF NOT EXISTS coach_usage (
   id INTEGER PRIMARY KEY AUTOINCREMENT,

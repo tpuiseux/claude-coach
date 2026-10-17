@@ -44,6 +44,10 @@ const TOOLS = COACH_TOOLS.map((t) => ({ ...t, eager_input_streaming: true }));
 
 let client: Anthropic | null = null;
 
+export function getAnthropic(): Anthropic {
+  return getClient();
+}
+
 export function coachConfigured(): boolean {
   return Boolean(process.env.ANTHROPIC_API_KEY);
 }
@@ -105,10 +109,22 @@ function withCacheBreakpoint(history: MessageParam[]): MessageParam[] {
   return [...history.slice(0, -1), { ...last, content: blocks }];
 }
 
-function errorMessage(err: unknown): string {
+/** What went wrong, in words the athlete (or whoever runs the server) can act on. */
+export function errorMessage(err: unknown): string {
   if (err instanceof Anthropic.AuthenticationError) return "The coach's API key was refused.";
-  if (err instanceof Anthropic.RateLimitError)
+  if (err instanceof Anthropic.PermissionDeniedError) {
+    return "The coach's API key isn't allowed to do this.";
+  }
+  if (err instanceof Anthropic.NotFoundError) {
+    return "The coach's model setting (COACH_MODEL) names a model that doesn't exist.";
+  }
+  if (err instanceof Anthropic.RateLimitError) {
     return "The coach is busy right now - try again in a minute.";
+  }
+  // Billing problems come back as a plain 400; only the message tells them apart.
+  if (err instanceof Anthropic.BadRequestError && /credit balance/i.test(err.message)) {
+    return "The coach's API account has run out of credit.";
+  }
   if (err instanceof Anthropic.APIError) {
     return err.status && err.status >= 500
       ? "The coach's service is having trouble - try again shortly."

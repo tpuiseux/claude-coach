@@ -54,6 +54,7 @@
   <header>
     <h1>Your plans</h1>
     <div class="header-actions">
+      <a class="create" href="{base}/plans/new">Create a plan</a>
       <button onclick={handleImportClick} disabled={importing}>
         {importing ? "Importing…" : "Import plan"}
       </button>
@@ -75,10 +76,13 @@
   {/if}
 
   {#if data.plans.length === 0}
-    <p>
-      No training plan yet. Generate one with the <code>/coach</code> skill, then import the JSON file
-      above.
-    </p>
+    <div class="empty">
+      <p>No training plan yet.</p>
+      <a class="create big" href="{base}/plans/new">Create my plan with the coach</a>
+      <p class="hint">
+        Or generate one with the <code>/coach</code> skill in Claude Code and import the JSON file.
+      </p>
+    </div>
   {:else}
     <ul>
       {#each data.plans as plan (plan.id)}
@@ -139,6 +143,29 @@
     cursor: not-allowed;
   }
 
+  .create {
+    padding: 0.5rem 0.9rem;
+    border-radius: 8px;
+    background: #eab308;
+    color: #0a0a0b;
+    font-weight: 600;
+    font-size: 0.85rem;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .create.big {
+    display: inline-block;
+    padding: 0.75rem 1.2rem;
+    font-size: 0.95rem;
+    margin: 0.5rem 0 1rem;
+  }
+
+  .empty .hint {
+    color: #a1a1aa;
+    font-size: 0.85rem;
+  }
+
   .status {
     margin: 0 0 1.5rem;
     padding: 0.6rem 0.9rem;
@@ -193,6 +220,7 @@
     }
 
     .header-actions > button,
+    .header-actions > .create,
     .header-actions form,
     .header-actions form button {
       flex: 1;

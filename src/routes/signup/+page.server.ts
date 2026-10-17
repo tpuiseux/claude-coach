@@ -48,6 +48,6 @@ export const actions: Actions = {
     }
 
     startSession(cookies, userId);
-    throw redirect(302, `${base}/`);
+    throw redirect(302, `${base}/plans/new`);
   },
 };
