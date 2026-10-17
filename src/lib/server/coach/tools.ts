@@ -113,7 +113,7 @@ export const COACH_TOOLS: Tool[] = [
   {
     name: "propose_plan_changes",
     description:
-      "Propose changes to the plan. The athlete sees them as a card and applies or rejects them - nothing changes until they apply, and you'll be told what they did with their next message. Group related changes into one proposal. Changes apply in order; a proposal applies whole or not at all. Completed workouts can't be changed. When you change what a session is (sport, type, length, content), give its new humanReadable and structure too, or its old Garmin steps are dropped.",
+      "Propose changes to the plan. The athlete sees them as a card and applies or rejects them - nothing changes until they apply, and you'll be told what they did with their next message. Group related changes into one proposal. Changes apply in order; a proposal applies whole or not at all. Completed workouts can't be changed. When you add a session or change what one is (sport, type, length, content), give its humanReadable and its structure (the steps the athlete's watch follows, the repeats as an interval_set) - without one, the watch shows a single long block. Interval, tempo, threshold, VO2max, sprint and hill sessions are refused without a structure.",
     input_schema: {
       type: "object",
       properties: {

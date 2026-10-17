@@ -218,6 +218,24 @@ function snapshot(workout: Workout | CoachWorkoutFields, date: string): WorkoutS
   };
 }
 
+/** Sessions whose point is their intervals: exported without steps, the
+ * watch would show one long block instead of the repeats. */
+const QUALITY_TYPES = ["intervals", "tempo", "threshold", "vo2max", "sprint", "hills"];
+
+/**
+ * Refuses a quality run without its export steps. A generic warm-up/run/
+ * cool-down is fine for an easy run, useless for 10 x 500 m.
+ */
+export function requireSteps(
+  workout: Pick<Workout, "sport" | "type" | "name" | "structure">
+): void {
+  if (workout.sport === "run" && QUALITY_TYPES.includes(workout.type) && !workout.structure) {
+    throw new ValidationError(
+      `"${workout.name}" is a ${workout.type} session: give its structure (warm-up, the repeats as an interval_set with work and recovery steps, cool-down), or the watch gets one long block`
+    );
+  }
+}
+
 /** Editing what a session is without giving its new steps would leave the
  * old steps behind for the Garmin/FIT export; they're dropped instead, and
  * the export falls back to a generic warm-up/main/cool-down. */
@@ -248,6 +266,7 @@ function applyOne(plan: TrainingPlan, change: PlanChange): ChangePreview {
       id: `coach-${randomUUID()}`,
       completed: false,
     } as Workout;
+    requireSteps(workout);
     addWorkout(plan, change.date, workout);
     return {
       op: "add",
@@ -282,6 +301,7 @@ function applyOne(plan: TrainingPlan, change: PlanChange): ChangePreview {
         found.workout.structure = structure;
       } else if (CONTENT_FIELDS.some((f) => f in updates)) {
         delete found.workout.structure;
+        requireSteps(found.workout);
       }
       return {
         op: "edit",

@@ -10,7 +10,7 @@ import type {
   WorkoutStep,
 } from "../../../schema/training-plan.js";
 import type { PlanAssessment, PlanForm } from "../../planDraft.js";
-import { parseFields } from "../coach/changes.js";
+import { parseFields, requireSteps } from "../coach/changes.js";
 import { ValidationError } from "../validation.js";
 import { dayOfWeek, type WeekFrame } from "./form.js";
 
@@ -226,6 +226,11 @@ export function parseWeek(
         fields = parseFields(raw, true);
       } catch (err) {
         throw new ValidationError(`${date} workout ${k + 1}: ${(err as Error).message}`);
+      }
+      try {
+        requireSteps(fields as Workout);
+      } catch (err) {
+        throw new ValidationError(`${date}: ${(err as Error).message}`);
       }
       const minutes = fields.structure ? structureMinutes(fields.structure) : null;
       if (

@@ -159,14 +159,56 @@ describe("applyPlanChanges", () => {
   });
 
   it("drops stale export steps when a session's content changes without new ones", () => {
+    // An easy run is fine with the generic export...
     const p = plan();
     applyPlanChanges(
       p,
       parsePlanChanges([
-        { op: "edit", workoutId: "tempo", updates: { durationMinutes: 30 }, reason: "" },
+        {
+          op: "edit",
+          workoutId: "tempo",
+          updates: { type: "endurance", durationMinutes: 30 },
+          reason: "",
+        },
       ])
     );
     expect(p.weeks[0].days[0].workouts[0].structure).toBeUndefined();
+
+    // ...a quality session isn't: it must come with its steps.
+    expect(() =>
+      applyPlanChanges(
+        plan(),
+        parsePlanChanges([
+          { op: "edit", workoutId: "tempo", updates: { humanReadable: "10 x 500 m" }, reason: "" },
+        ])
+      )
+    ).toThrow(/tempo session: give its structure/);
+    expect(() =>
+      applyPlanChanges(
+        plan(),
+        parsePlanChanges([
+          {
+            op: "add",
+            date: "2026-10-21",
+            workout: { sport: "run", type: "intervals", name: "Club : 10 x 500 m" },
+            reason: "",
+          },
+        ])
+      )
+    ).toThrow(/intervals session/);
+    const r = plan();
+    applyPlanChanges(
+      r,
+      parsePlanChanges([
+        {
+          op: "edit",
+          workoutId: "tempo",
+          updates: { humanReadable: "3 x 6'", structure: STRUCTURE },
+          reason: "",
+        },
+      ])
+    );
+    expect(r.weeks[0].days[0].workouts[0].structure?.main).toHaveLength(1);
 
     const q = plan();
     applyPlanChanges(
